@@ -1,0 +1,26 @@
+#RECORD ACTIONS
+The Cashier Program provides a Record Management module for viewing and managing saved customer transaction data.
+
+--Customer History--
+All completed billing transactions are automatically saved within the Cashier Program.
+(To learn more about how customer data is stored, refer to help.customer_history.)
+
+--Accessing Record Management--
+From the Main Menu, enter 2 to open the Record Management module.
+
+--Available Actions--
+The following operations can be performed within the Record Management module:
+- Retrieve Entire Customer Record
+>>> Displays all saved customer transaction records.
+- Retrieve Specific Customer Transaction Record
+>>> Displays the complete transaction history associated with a particular customer name and mobile number.
+- Delete Customer Record
+>>> Permanently deletes all transaction data associated with the specified customer.
+- Exit Record Management
+>>> Closes the Record Management module and returns to the Main Menu.
+
+--Performing an Action--
+To perform an operation, enter the number corresponding to the desired action as displayed in the Record Management menu.
+
+--Notes--
+- Deleted records cannot be recovered

@@ -1,0 +1,34 @@
+#LIST OF ITEMS
+The List of Items (or Menu of Items) is an internal database that stores all items which can be processed by the Cashier Program during billing.
+Only items present in this list can be billed.
+
+--Item Management--
+The cashier can perform the following operations on the List of Items:
+- Add new items to the list.
+- Delete individual items from the list.
+- Restore the list to its default state by deleting the entire custom list.
+
+--Default Item List--
+The Cashier Program is initially configured with the following default items and their respective prices:
+
+Item	Price
+Potato	₹20
+Tomato	₹30
+Carrot	₹50
+Banana	₹80
+Apple	₹150
+Grape	₹200
+Orange	₹100
+Flour	₹50
+Rice	₹30
+Mango	₹150
+Onion	₹100
+Pulses	₹110
+Bread	₹20
+Milk	₹100
+
+--Billing Rules--
+- Only items present in the List of Items can be processed by the Billing Module.
+- Any newly added items become immediately available for billing.
+- Removing an item prevents it from being billed until it is added again.
+- Restoring the default list removes all custom items and restores the original item list shown above.

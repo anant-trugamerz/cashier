@@ -1,0 +1,28 @@
+#AUTOSUGGEST MECHANISM
+The Cashier Program includes an Autosuggest Mechanism to account for typing errors while entering item names in the Billing Prompt.
+
+--When Autosuggest is Triggered--
+If the entered item name does not exactly match any item in the menu (list_of_items), the Autosuggest Mechanism is automatically activated.
+
+--How It Works--
+The entered text is compared against all available item names using the Jaccard Similarity algorithm.
+The software identifies the closest matching item and displays it as a suggestion.
+
+--Suggestion Prompt--
+The suggestion is displayed in the following format:
+"<entered item>" not recognised...
+Did you mean "<suggested item>"? (y/n)
+Example:
+"coka cola" not recognised...
+Did you mean "Coca Cola"? (y/n)
+
+--User Response--
+The cashier must respond using one of the following options:
+y — Bill the suggested item.
+n — Reject the suggestion. No item is added to the current bill.
+
+--Notes--
+- Autosuggestions are only generated when no exact item match is found. If no sufficiently similar item is found, the program reports the item as unrecognised without displaying a suggestion.
+- The closest matching item is determined using the Jaccard Similarity method.
+- The response must be entered as either y or n.
+- After rejecting the suggestion, the cashier is returned to the Billing Prompt to enter another item.

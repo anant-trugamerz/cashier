@@ -1,0 +1,26 @@
+#BILLING PROMPT
+This prompt is used by the **Cashier Program** to enter items and their quantities into the current bill.
+
+--Input Format--
+>>> action item_1 quantity_1
+>>> action item_2 quantity_2
+...
+
+--Actions--
+  *Add an item*
+  Simply enter the item name and quantity. [No keyword required]
+  *Edit an existing item* (`e`)
+  Updates the quantity of an item already added to the bill. The previously saved quantity will be replaced.
+  *Remove an item* (`r` or `d`)
+  Deletes the specified item from the current bill.
+
+--Exiting the Prompt--
+To finish entering items, press *Enter* on an empty line (submit a blank row).
+
+--Available Items--
+(To view the complete list of valid items, refer to `list_of_items`).
+
+--Quantity Rules--
+* Quantity must be a whole number (integer).
+* Decimal quantities are **not supported** in the current version and will be introduced in a future update.
+* Typing the same item name multiple times simply adds their quantities for the final bill. To change the quantity, enter "e <item> <new quan>"

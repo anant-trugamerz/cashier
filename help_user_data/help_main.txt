@@ -1,0 +1,22 @@
+#WELCOME TO THE CASHIER SOFTWARE BY ANANT
+It is a software in which a cashier can easily manage the billing process.
+The software can automatically match pricing of items and create bills, and store customer transaction data as history data.
+It is a simple yet robust program and an implementation of basic software architecture.
+
+--Available Help Topics--
+- billing
+- billing_prompt
+- customer_history
+- record_actions
+- autosuggest_mechanism
+- list_of_items
+
+--Usage--
+help.<topic>
+
+--Examples--
+help.billing
+help.record_actions
+
+--To exit--
+help.exit

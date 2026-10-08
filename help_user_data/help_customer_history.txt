@@ -1,0 +1,25 @@
+#CUSTOMER HISTORY
+The Cashier Program automatically maintains a history of every completed billing transaction for future reference.
+
+--Billing Details--
+After each billing cycle is completed, the following information is automatically saved to the software's database:
+- Date and Time of Billing
+- Cashier Name
+- Customer Name
+- Customer Mobile Number
+- Items billed, along with their respective quantities and prices
+- Net Total Amount Payable
+
+--Storage Format--
+Customer history is stored in a nested .json file format, allowing billing records to be efficiently organised and retrieved by the Cashier Program.
+
+--Accessing Customer History--
+Saved customer records can be viewed by interacting with the Cashier Program.
+For information on the available customer history operations, refer to record_actions
+
+--Notes--
+- Billing records are saved automatically upon successful completion of a bill. No manual action is required.
+- Customer records can be searched using the available record actions.
+- Previous billing records cannot be modified through the Customer History module.
+- Billing records are stored in chronological order based on the date and time of billing.
+

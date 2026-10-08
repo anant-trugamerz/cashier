@@ -1,0 +1,12 @@
+# IDE
+.idea/
+
+# Virtual environment
+.venv/
+
+# Python generated files
+__pycache__/
+*.pyc
+
+# Local application data
+record.json

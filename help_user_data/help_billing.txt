@@ -1,0 +1,26 @@
+#BILLING PROCESS
+This section explains the complete billing workflow of the Cashier Program.
+
+--Customer Details--
+Before billing begins, the cashier is required to enter the following customer information:
+- Customer Name
+- Customer Mobile Number
+
+--Billing Prompt--
+After entering the customer details, the Billing Prompt is displayed, where items and their quantities are entered in the following format:
+>>> action item_1 quantity_1
+>>> action item_2 quantity_2
+...
+(For detailed information about the Billing Prompt and its available actions, refer to help.billing_prompt.)
+
+--Input Rules--
+The following rules apply while entering billing data:
+- The item name must exactly match an item in the menu. (Refer to help.list_of_items for the complete list of valid items.)
+- If the entered item name contains a typing error or closely resembles an existing item, the Autosuggest Mechanism will suggest the closest match. (Refer to help.autosuggest for more information.)
+- Item quantities must follow the rules specified in 'help.billing_prompt'.
+
+--Billing Output--
+Once the bill is confirmed:
+- A formatted bill is generated and displayed.
+- The completed transaction is automatically saved to the customer history database.
+(For details about stored billing records, refer to help.customer_history.)
