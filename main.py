@@ -470,7 +470,7 @@ def bill_process(cashier,element):
     match element[0].lower():
         case "r" | "rem" | "remove" | "d" | "delete":
             try:
-                a=cashier.edit_quan(element[1],quan)
+                a=cashier.rem_item(element[1])
             except (ValueError, IndexError):
                 a = -1
             if a==-1:
