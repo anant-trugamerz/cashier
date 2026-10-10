@@ -256,8 +256,11 @@ class RecHandler(object):
         """
         Used to retrieve the data from the record file...
         """
-        with open("record.json","r") as f:
-            rec=json.load(f)
+        try:
+            with open("record.json","r") as f:
+                rec=json.load(f)
+        except FileNotFoundError:
+            rec = None
         return rec
     @classmethod
     def retrieve_cust(cls,name,mobile):
@@ -406,7 +409,7 @@ def mob_type_error_UI(mob,error):
     match error:
         case "invalid_type":
             print("Invalid number!")
-            print("Please enter correct number!",end=" ")
+            print("Please enter correct number: ",end=" ")
             a=input()
             return a
         case "invalid_format":
@@ -466,7 +469,10 @@ def bill_process(cashier,element):
     quan=1
     match element[0].lower():
         case "r" | "rem" | "remove" | "d" | "delete":
-            a=cashier.rem_item(element[1])
+            try:
+                a=cashier.rem_item(element[1])
+            except (ValueError, IndexError):
+                a = -1
             if a==-1:
                 return {
                     "error":True,
@@ -474,38 +480,38 @@ def bill_process(cashier,element):
                     "function":"removing item",
                     "quantity":None,
                     }
+                    
         case "e" | "edit" | "update":
             try:
                 quan=int(element[2])
-            except ValueError:
+            except (ValueError, IndexError):
                 quan=1
-            except IndexError:
-                quan=1
-            finally:
+            try:
                 a=cashier.edit_quan(element[1],quan)
-                if a==-1:
-                    return {
-                        "error":True,
-                        "type":"item_not_defined",
-                        "function":"editing quantity",
-                        "quantity":quan,
-                        }
+            except (ValueError, IndexError):
+                a = -1
+            if a==-1:
+                return {
+                    "error":True,
+                    "type":"item_not_defined",
+                    "function":"editing quantity",
+                    "quantity":quan,
+                    }
+            
         case _:
             try:
                 quan=int(element[1])
-            except ValueError:
+            except (ValueError, IndexError):
                 quan=1
-            except IndexError:
-                quan=1
-            finally:
-                a=cashier.billing(element[0],quan)
-                if a==-1:
-                    return {
-                        "error":True,
-                        "type":"item_not_defined",
-                        "function":"billing",
-                        "quantity":quan,
-                        }
+
+            a=cashier.billing(element[0],quan)
+            if a==-1:
+                return {
+                    "error":True,
+                    "type":"item_not_defined",
+                    "function":"billing",
+                    "quantity":quan,
+                    }
     return {"error":False}
 def bill_header():
     print("-"*64)
@@ -855,4 +861,8 @@ def main_controller():
             case _:
                 main_error_handle("unknown_error")
 
-main_controller()
+if __name__ == '__main__':
+    try:
+        main_controller()
+    except KeyboardInterrupt:
+        print('\nExiting...')
