@@ -22,7 +22,7 @@ Rather than being just a collection of functions, the project is designed around
 Cashier is organized around separation of concerns, so individual components can be developed and maintained without turning the entire application into one giant function.
 
 | Component     | Responsibility                                      |
-| ------------- | --------------------------------------------------- |
+|---------------|-----------------------------------------------------|
 | `Cashier`     | Coordinates the main cashier operations             |
 | `Transaction` | Represents and handles transaction-related data     |
 | `RecHandler`  | Manages transaction records and persistence         |
@@ -68,14 +68,15 @@ The exact file structure may evolve as the project develops.
 
 ## Development Roadmap
 
-- [x] Build the core cashier and transaction management system
-- [x] Implement persistent transaction history using JSON
-- [x] Add an editable CSV-based product menu and item suggestions
-- [ ] Expand billing functionality with taxes, discounts, and multiple payment methods
-- [ ] Introduce invoice numbering and automatic stock management
-- [ ] Improve terminal UI, menu navigation, and error handling
-- [ ] Add menu and customer detail editing directly through the interface
-- [ ] Build a graphical user interface using CustomTkinter
+- [x] Core cashier and transaction management
+- [x] CSV-based menu storage and JSON transaction history
+- [x] Modular application structure
+- [ ] Improve billing features and item management
+- [ ] Implement a Rich/Textual-based terminal UI
+- [ ] Add automatic stock management
+- [ ] Build a desktop GUI
+
+See [TODO.md](TODO.md) for the detailed task list.
 
 ## Project Goals
 
@@ -98,3 +99,7 @@ The immediate focus is on improving the core functionality and refining the exis
 **Anant** · [GitHub](https://github.com/anant-trugamerz)
 
 Built as a personal project to learn software engineering through practical implementation.
+
+### NOTE ON THE USE OF AI
+
+> AI has played a minimal role in this project. I have written the code and designed the system myself. I have only used AI for minor assistance with comments and docstrings, as well as refining textual content in this README and the user help outputs.
