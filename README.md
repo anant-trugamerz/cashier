@@ -100,6 +100,11 @@ The immediate focus is on improving the core functionality and refining the exis
 
 Built as a personal project to learn software engineering through practical implementation.
 
+## Contributors
+
+- **Anant** ([@anant-trugamerz](https://github.com/anant-trugamerz)) - Main author and designer of the project.
+- **Dhruv** ([@DhruvJ2409](https://github.com/DhruvJ2409)) - Contributed to debugging and code review.
+
 ### NOTE ON THE USE OF AI
 
 > AI has played a minimal role in this project. I have written the code and designed the system myself. I have only used AI for minor assistance with comments and docstrings, as well as refining textual content in this README and the user help outputs.
