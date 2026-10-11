@@ -469,10 +469,7 @@ def bill_process(cashier,element):
     quan=1
     match element[0].lower():
         case "r" | "rem" | "remove" | "d" | "delete":
-            try:
-                a=cashier.rem_item(element[1])
-            except (ValueError, IndexError):
-                a = -1
+            a=cashier.rem_item(element[1])
             if a==-1:
                 return {
                     "error":True,
@@ -486,10 +483,7 @@ def bill_process(cashier,element):
                 quan=int(element[2])
             except (ValueError, IndexError):
                 quan=1
-            try:
-                a=cashier.edit_quan(element[1],quan)
-            except (ValueError, IndexError):
-                a = -1
+            a=cashier.edit_quan(element[1],quan)
             if a==-1:
                 return {
                     "error":True,
