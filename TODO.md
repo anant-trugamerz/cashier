@@ -4,8 +4,8 @@
 - [ ] Edit item prices during billing
 - [ ] Add a "More" menu to organize additional UI features
 - [ ] Allow customer details to be edited after entry
-- [ ] Display the complete item list
-- [ ] Allow editing the item list/menu
+- [x] Display the complete item list
+- [x] Allow editing the item list/menu
 
 ## Medium Updates
 - [ ] Add GST/tax, discounts, and payment method selection during checkout

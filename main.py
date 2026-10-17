@@ -10,25 +10,11 @@ The software can automatically match pricing of items and create bills, and stor
 It is a simple yet robust program and an implementation of basic software architecture.
 """
 
-#LOGIC BASED
-#todo: gst/tax and discount options and payment method (credit card, upi etc)
-#todo: edit price of item during billing
-#todo: invoice number
-#todo: item categories
-#todo: automatic stock management system
-
-#UI BASED
-#todo: better error messages
-#todo: make 'more' loop
-#todo: display the entire menu of items (implement in the ui)
-#todo: EDITING LoI (EDITING THE CSV FILE) [FEATURE!!]-- embed in ui
-#todo: edit customer name once entered... same for mobile no. --> maybe after gui (as it will be easier to implement)
-#todo: GUI USING CUSTOMTKINTER (FINAL BOSS!)
-
 #ERRORS AND DEBUGGING
+#todo: shorten the docstrings where overdocumented and add docstrings where non existent
 #todo: see screenshot for error that happened date 3/6/2026 -- can do nothing of it
-#todo: fix error dated 18 sept 2026
-
+#todo: fix error (see screenshot dated 18 sept 2026)
+#todo: optimise the autosuggest mechanism
 class ListOfItems(object):
     base_list={
         "potato":20,
@@ -47,7 +33,8 @@ class ListOfItems(object):
         "milk":100
     }
     @classmethod
-    def get_list(cls):
+    def get_list(cls)->dict[str,int]:
+        #todo: docstring
         try:
             with open("menu.csv","r") as menu_file:
                 reader=csv.reader(menu_file)
@@ -64,8 +51,6 @@ class ListOfItems(object):
     @classmethod
     def add_item(cls,item: str,price: int)->int:
         """Used for appending the menu list of items saved in a csv file.
-        :param item: name of the item
-        :param price: price of the item
         :return: 0 if successfully updated, -1 if item already exists"""
         with open("menu.csv","r",newline="") as menu_file:
             check=False
@@ -80,17 +65,16 @@ class ListOfItems(object):
             writer.writerow([item,price])
         return 0
     @classmethod
-    def del_item(cls,item: str)-> int:
+    def del_item(cls,item_name: str)-> int:
         """Used for removing existing items from the menu list csv file
-        :param item: name of the item
         :return: 0 if successfully updated, -1 if item not found in file"""
-        item = process(item)
+        name = process(item_name)
         with open("menu.csv","r",newline="") as menu_file:
             reader=csv.reader(menu_file)
             updated=[]
             removed=False
             for i in reader:
-                if i[0].lower()==item.lower():
+                if i[0].lower()==name.lower():
                     removed = True
                     continue
                 updated.append(i)
@@ -103,25 +87,33 @@ class ListOfItems(object):
             return -1
     @classmethod
     def find_item(cls,item):
+
         with open("menu.csv","r",newline="") as menu_file:
             reader=csv.reader(menu_file)
             for i in reader:
                 if i[0].lower()==item.lower():
-                    return i
+                    return True
         return False
     @classmethod
     def edit_price(cls,item,new_price):
         with open("menu.csv","r",newline="") as menu_file:
             reader=csv.reader(menu_file)
             updated=[]
+            status=False
             for i in reader:
                 if i[0].lower()==item.lower():
+                    status=True
+                    old_price=int(i[1])
                     updated.append([i[0],new_price])
                 else:
                     updated.append(i)
         with open("menu.csv","w",newline="") as menu_file:
             writer=csv.writer(menu_file)
             writer.writerows(updated)
+        if status:
+            return old_price
+        else:
+            return -1
     @classmethod
     def del_list(cls):
         with open("menu.csv", "w", newline="") as menu_file:
@@ -137,9 +129,6 @@ class Cashier(object):
     def __init__(self,cashier="Unknown",cust="Unknown",cust_num="NA"):
         """
         Used to initialize a Cashier object
-        :param cashier: name of the cashier
-        :param cust: name of the customer
-        :param cust_num: number of customer
         """
         self.name=cashier
         self.item=""
@@ -152,8 +141,6 @@ class Cashier(object):
         """
         This is the core billing method which is used to add items to the billing dictionary...
         It adds the name of the item along with rate and quantity to the billing dictionary...
-        :param item: name of the item to be added
-        :param qnt: quantity of the item to be added to the billing dictionary
         :return: 0 if billing was done successfully, -1 if item was not found in the billing dictionary
         """
         item=item.lower()
@@ -171,7 +158,6 @@ class Cashier(object):
     def rem_item(self,item):
         """
         This is the method which allows the user to remove any item from the billing dictionary...
-        :param item: name of item to be removed
         :return: 0 if item was successfully removed, -1 if item was not found in the dictionary
         """
         if item not in self.items:
@@ -182,8 +168,6 @@ class Cashier(object):
     def edit_quan(self,item,qnt=1):
         """
         this is the method used to edit the quantity of an item as billed by the cashier...
-        :param item: name of the item whose quantity is modified
-        :param qnt: updated quantity that is to replace the previous one
         :return: 0 if the bill was edited successfully, -1 if item was not found in the billing dictionary...
         """
         try:
@@ -466,7 +450,6 @@ def bill_process(cashier,element):
     :param element: the input element to process
     :return: if an error has occurred, the context of the problem...
     """
-    quan=1
     match element[0].lower():
         case "r" | "rem" | "remove" | "d" | "delete":
             a=cashier.rem_item(element[1])
@@ -516,7 +499,7 @@ def display_bill(items: dict[str,list[int]], total: int =0, other_data :dict | N
     Used to display the billing details to the user in an organized manner
     :param items: the items which are to be displayed
     :param total: the total monetary amount
-    :param other_data: other data regarding the transaction details
+    :param other_data: other data regarding the transaction details -> cashier name, customer name, customer mob
     :return: None
     """
     print("-"*64)
@@ -635,8 +618,6 @@ def rec_UI():
 def get_spec_rec(name,number):
     """
     to get the transaction details of a specific customer...
-    :param name: name of the customer
-    :param number: number of the customer
     :return: the transaction details of the customer
     """
     trans_data=RecHandler.retrieve_cust(name,number)
@@ -779,6 +760,227 @@ def help_controller():
         file_data=help_retrieve_data(file_name)
         help_output(file_data)
 
+#LIST OF ITEMS MANAGEMENT PART
+def manage_loi_input()->dict[str,str | int]:
+    """
+    Takes user input regarding what action they want to perform,
+    depending on the action, also takes input of necessary details needed for that action.
+    :return: input details to the controller (can enter an error as 'choice' in case of invalid input)
+    """
+    choice=input("Enter 1 to display items list, 2 to add an item to the list, 3 to edit the price of an existing item, 4 to delete existing item and 5 to exit... \n")
+    try:
+        choice=int(process(choice))
+    except ValueError:
+        choice=None
+    match choice:
+        case 1:
+            return {
+                "choice":"display_items"
+            }
+        case 2:
+            try:
+                name, price= input("Enter name and price (separated by a comma) \nFormat: <item_name>, <price> where price is an integer...\n").split(",")
+            except ValueError:
+                return {
+                    "choice":"input_not_valid"
+                }
+            return {
+                "choice": "add_item",
+                "item_name": process(name),
+                "price": process(price)
+            }
+        case 3:
+            try:
+                name, price= input("Enter name and updated price (separated by a comma) \nFormat: <item_name>, <price> where price is an integer...\n").split(",")
+            except ValueError:
+                return {
+                    "choice":"input_not_valid"
+                }
+            return {
+                "choice": "edit_price",
+                "item_name": process(name),
+                "price": process(price)
+            }
+        case 4:
+            name=input("Enter name of item you want to delete: ")
+            return {
+                "choice": "delete_item",
+                "item_name": name
+            }
+        case 5:
+            return {
+                "choice": "exit_loop",
+            }
+        case _:
+            return {"choice":"input_not_valid"}
+
+def show_loi(menu: dict[str,int])->Exception | None:
+    """
+    Interacts with the class method to display the list of items to the user
+    :param menu: The dictionary which contains the items and respective prices for displaying to the user
+    :return: None if no error happened, or Exception if an error happened
+    """
+    print(f"{'Item':20} {'Rate':5}")
+    try:
+        for i,j in menu.items():
+            print(f"{i:20} {j:5}")
+        return None
+    except Exception as e:
+        return e
+
+def loi_add_item(name: str,price: int)->dict[str,str|bool]:
+    """
+    Adds new item with price to the list of items by interacting with the class.
+    :return: dictionary telling about error and type of error
+    """
+    check=ListOfItems.add_item(item=name,price=price)
+    match check:
+        case -1:
+            return {
+                "error": True,
+                "type": "item_already_exists"
+            }
+        case 0:
+            return {
+                "error": False,
+            }
+        case _:
+            return {
+                "error": True,
+                "type": "unknown"
+            }
+
+def loi_update_price(item: str,price: int)->dict:
+    """
+    Updates the price of an existing item in the csv file (list of items).
+    :return: status about error, type of error and other important details
+    """
+    status=ListOfItems.edit_price(item,price)
+    if status==-1:
+        return {
+            "error": True,
+            "type": "item_not_found"
+        }
+    else:
+        return {
+            "error": False,
+            "old_price": status
+        }
+def loi_delete_item(name:str)->dict[str,str|bool]:
+    """
+    Deletes an existing item in the csv file (list of items).
+    :return: status about error and type of error
+    """
+    status=ListOfItems.del_item(name)
+    if status==-1:
+        return {
+            "error": True,
+            "type": "item_not_found"
+        }
+    else:
+        return {
+            "error": False
+        }
+
+def loi_user_output(action: str,details=None):
+    """Displays the final closing message for each action performed successfully..."""
+    match action:
+        case "add_item":
+            print("Successfully added new item",end=" ")
+            if details:
+                print(f"'{details[0]}' with price {details[1]}.")
+            else:
+                print()
+        case "edit_price":
+            print("Successfully edited price",end=" ")
+            if details:
+                print(f"of '{details[0]}' from {details[1]} to {details[2]}.")
+            else:
+                print()
+        case "delete_item":
+            print("Successfully deleted item",end=" ")
+            if details:
+                print(f"'{details}'")
+            else:
+                print()
+        case "exit_loop":
+            print("Exiting...")
+    pass
+
+def loi_error_messages(error: str | bool | Exception =True):
+    """
+    Displays error messages regarding the items list (loi) management in the ui.
+    """
+    match error:
+        case "invalid_price":
+            print("Price is invalid!\nEnter an integer price...")
+        case "item_already_exists":
+            print("Item with that name already exists!")
+        case "item_not_found":
+            print("Item with that name not found!")
+        case "input_not_valid":
+            print("Input is not valid!\nCheck the given instructions carefully...")
+        case "action_not_defined":
+            print("Action not defined!\nEnter a valid action!")
+        case True:
+            print("An error occurred!")
+        case _:
+            print(f"An error occurred: {error}")
+def manage_loi_controller(): #loi is List of Items
+    #todo: also add a find item function (gives price)
+    #todo: also enter delete entire list option (maybe an option within delete item menu) (pls ask for confirmation from user to account for mistakes)
+    while True:
+        user_input=manage_loi_input()
+        match user_input["choice"]:
+            case "display_items":
+                error=show_loi(ListOfItems.get_list())
+                if error:
+                        loi_error_messages(error)
+            case "add_item":
+                name,price =user_input["item_name"],user_input["price"]
+                try:
+                    price=int(price)
+                    assert price>=0
+                except (ValueError,AssertionError):
+                    loi_error_messages("invalid_price")
+                    continue
+                status=loi_add_item(name,price)
+                if status["error"]:
+                    loi_error_messages(status["type"])
+                else:
+                    loi_user_output("add_item",[name,price])
+            case "edit_price":
+                name, price= user_input["item_name"],user_input["price"]
+                try:
+                    price=int(price)
+                except ValueError:
+                    loi_error_messages("invalid_price")
+                    continue
+                status=loi_update_price(name,price)
+                if status["error"]:
+                    #todo: implement autosuggest over here
+                    loi_error_messages(status["type"])
+                else:
+                    loi_user_output("edit_price",[name,status["old_price"],price])
+            case "delete_item":
+                name=user_input["item_name"]
+                status = loi_delete_item(name)
+                if status["error"]:
+                    #todo: implement autosuggest over here
+                    loi_error_messages(status["type"])
+                else:
+                    loi_user_output("delete_item", name)
+            case "exit_loop":
+                loi_user_output("exit_loop")
+                break
+            case "input_not_valid":
+                loi_error_messages("input_not_valid")
+            case _:
+                loi_error_messages("action_not_defined")
+
+#todo: create autosuggest mechanism
+#todo: optimise autosuggest mechanism by merging functions from different segments
+
 #MAIN PART
 def main_UI_welcome():
     """
@@ -798,12 +1000,12 @@ def main_UI_loop():
     Allows the user to interact with the program in a looping structure and use the features the program has to offer...
     :return: whether an error has occurred or not, and the user input...
     """
-    print("Enter 1 to create bill, 2 for customer record actions, 3 to learn more about the program, and 4 to exit...")
+    print("Enter 1 to create bill, 2 for customer record actions, 3 to learn more about the program, 4 to enter items management menu and 5 to exit...")
     try:
         choice=int(input())
     except ValueError:
         return {"error":"input_not_valid"}
-    action_list={1:"create_bill",2:"record_actions",3:"help_window",4:"exit_loop"}
+    action_list={1:"create_bill",2:"record_actions",3:"help_window",4:"items_list",5:"exit_loop"}
     try:
         return {"error":None,"action":action_list[choice]}
     except IndexError:
@@ -812,8 +1014,6 @@ def main_UI_loop():
 def main_error_handle(error):
     """
     Used to handle the errors which can occur while interacting with the user...
-    :param error: the error that has occurred
-    :return: None
     """
     match error:
         case "input_not_valid":
@@ -849,6 +1049,8 @@ def main_controller():
                 rec_controller()
             case "help_window":
                 help_controller()
+            case "items_list":
+                manage_loi_controller()
             case "exit_loop":
                 exit_handle()
                 break
