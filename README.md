@@ -27,6 +27,7 @@ Cashier is organized around separation of concerns, so individual components can
 | `Transaction` | Represents and handles transaction-related data     |
 | `RecHandler`  | Manages transaction records and persistence         |
 | `AutoSuggest` | Provides item suggestions using similarity matching |
+| `ListOfItems` | Helps manage and edit the items' list               |
 
 The goal is to keep the user interface, business logic, and data storage as independent as practical.
 
