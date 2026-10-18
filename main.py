@@ -87,13 +87,12 @@ class ListOfItems(object):
             return -1
     @classmethod
     def find_item(cls,item):
-
         with open("menu.csv","r",newline="") as menu_file:
             reader=csv.reader(menu_file)
             for i in reader:
                 if i[0].lower()==item.lower():
-                    return True
-        return False
+                    return i[1]
+        return -1
     @classmethod
     def edit_price(cls,item,new_price):
         with open("menu.csv","r",newline="") as menu_file:
@@ -115,7 +114,7 @@ class ListOfItems(object):
         else:
             return -1
     @classmethod
-    def del_list(cls):
+    def reset_list(cls):
         with open("menu.csv", "w", newline="") as menu_file:
             writer = csv.writer(menu_file)
             for i, j in ListOfItems.base_list.items():
@@ -490,10 +489,12 @@ def bill_process(cashier,element):
                     "quantity":quan,
                     }
     return {"error":False}
+
 def bill_header():
     print("-"*64)
     print(f"{"ANANT'S CASHIER SOFTWARE":^64}")
     print("-"*64)
+
 def display_bill(items: dict[str,list[int]], total: int =0, other_data :dict | None =None):
     """
     Used to display the billing details to the user in an organized manner
@@ -520,6 +521,7 @@ def display_bill(items: dict[str,list[int]], total: int =0, other_data :dict | N
     print(f"TOTAL={total}")
     print(f"TOTAL ITEMS PURCHASED={len(items)}")
     print("-"*64)
+
 def bill_confirmation()->bool:
     """
     This function allows the user to confirm the bill ie the bill will be saved or cancel the bill ie the bill will not be saved.
@@ -535,6 +537,7 @@ def bill_confirmation()->bool:
                 return False
             case _:
                 print("Please enter yes or no...")
+
 def correct_mobile(incorrect_mob):
     corr_num = False
     while not corr_num:
@@ -555,7 +558,6 @@ def main_bill_controller(cash_name):
     :param cash_name: the name of the cashier
     :return: None
     """
-
     other_data = billing_UI_intro()
 
     input_number = other_data["customer_num"]
@@ -589,6 +591,7 @@ def main_bill_controller(cash_name):
     record_handle=RecHandler(trans_data)
     record_handle.update_rec()
     return
+
 #RECORD PART
 def rec_UI():
     """
@@ -761,22 +764,42 @@ def help_controller():
         help_output(file_data)
 
 #LIST OF ITEMS MANAGEMENT PART
-def manage_loi_input()->dict[str,str | int]:
+def manage_loi_input()->dict[str,str | int | bool]:
     """
     Takes user input regarding what action they want to perform,
     depending on the action, also takes input of necessary details needed for that action.
     :return: input details to the controller (can enter an error as 'choice' in case of invalid input)
     """
-    choice=input("Enter 1 to display items list, 2 to add an item to the list, 3 to edit the price of an existing item, 4 to delete existing item and 5 to exit... \n")
+    choice=input("Enter 1 to display items list or retrieve price of specific item\n2 to add an item to the list\n3 to edit the price of an existing item\n4 to delete existing item or reset list\n5 to exit... \n-- ")
     try:
         choice=int(process(choice))
     except ValueError:
         choice=None
     match choice:
         case 1:
-            return {
-                "choice":"display_items"
-            }
+            print("Enter 1 to display items list, 2 to retrieve specific item price...")
+            sub_choice=input()
+            try:
+                sub_choice=int(sub_choice)
+            except ValueError:
+                return {
+                    "choice":"input_not_valid"
+                }
+            match sub_choice:
+                case 1:
+                    return {
+                        "choice":"display_items"
+                    }
+                case 2:
+                    name=process(input("Enter name of item: "))
+                    return {
+                        "choice":"specific_item",
+                        "name":name
+                    }
+                case _:
+                    return {
+                        "choice":"input_not_valid"
+                    }
         case 2:
             try:
                 name, price= input("Enter name and price (separated by a comma) \nFormat: <item_name>, <price> where price is an integer...\n").split(",")
@@ -802,11 +825,43 @@ def manage_loi_input()->dict[str,str | int]:
                 "price": process(price)
             }
         case 4:
-            name=input("Enter name of item you want to delete: ")
-            return {
-                "choice": "delete_item",
-                "item_name": name
-            }
+            print("Enter 1 to delete specific item, 2 to reset entire items list...")
+            sub_choice=input()
+            try:
+                sub_choice = int(sub_choice)
+            except ValueError:
+                return {
+                    "choice":"input_not_valid"
+                }
+            match sub_choice:
+                case 1:
+                    name = input("Enter name of item you want to delete: ")
+                    return {
+                        "choice": "delete_item",
+                        "item_name": name
+                    }
+                case 2:
+                    conf=input("Are you sure you want to reset list? \nAll changes made to the base list till date will be reset and inbuilt base list will remain. \nChanges cannot be undone! \nDo you want to continue? (y/n): ")
+                    match process(conf):
+                        case "y" | "ya" | "yes" | "yeah":
+                            return {
+                                "choice":"reset_list",
+                                "conf": True
+                            }
+                        case "n" | "na" | "no":
+                            return {
+                                "choice":"reset_list",
+                                "conf": False
+                            }
+                        case _:
+                            return {
+                                "choice":"input_not_valid"
+                            }
+                case _:
+                    return {
+                        "choice":"input_not_valid"
+                    }
+
         case 5:
             return {
                 "choice": "exit_loop",
@@ -866,11 +921,19 @@ def loi_update_price(item: str,price: int)->dict:
             "error": False,
             "old_price": status
         }
-def loi_delete_item(name:str)->dict[str,str|bool]:
+
+def loi_delete_item(name:str | int)->dict[str,str|bool]:
     """
     Deletes an existing item in the csv file (list of items).
+    If '-1' (integer) is passed as name, then it resets entire list
     :return: status about error and type of error
     """
+    if name==-1:
+        ListOfItems.reset_list()
+        return {
+            "error": False
+        }
+
     status=ListOfItems.del_item(name)
     if status==-1:
         return {
@@ -882,30 +945,63 @@ def loi_delete_item(name:str)->dict[str,str|bool]:
             "error": False
         }
 
-def loi_user_output(action: str,details=None):
+def loi_user_output(action: str, details: list | int= None):
     """Displays the final closing message for each action performed successfully..."""
     match action:
         case "add_item":
-            print("Successfully added new item",end=" ")
+            print("Successfully added new item!",end=" ")
             if details:
-                print(f"'{details[0]}' with price {details[1]}.")
+                print(f"'{details[0]}' with price {details[1]}!")
             else:
-                print()
+                print("!")
         case "edit_price":
             print("Successfully edited price",end=" ")
             if details:
-                print(f"of '{details[0]}' from {details[1]} to {details[2]}.")
+                print(f"of '{details[0]}' from {details[1]} to {details[2]}!")
             else:
-                print()
+                print("!")
         case "delete_item":
             print("Successfully deleted item",end=" ")
             if details:
-                print(f"'{details}'")
+                print(f"'{details}!'")
             else:
-                print()
+                print("!")
+        case "get_price":
+            print(f"Price of '{details[0]}' is {details[1]}.")
+        case "reset_list":
+            if details:
+                print(f"Successfully reset list...")
+            else:
+                print(f"Cancelling reset list...")
         case "exit_loop":
             print("Exiting...")
     pass
+
+def retrieve_price(name: str)->dict[str,str | bool | int]:
+    """
+    Used to retrieve the price of a specific item from the items list
+    :return: status about error and type of error or price of item in case of successful execution
+    """
+    status=ListOfItems.find_item(name)
+    try:
+        status=int(status)
+    except ValueError:
+        status=-2
+    if status==-1:
+        return {
+            "error": True,
+            "type": "item_not_found"
+        }
+    elif status==-2:
+        return {
+            "error": True,
+            "type": "unknown"
+        }
+    else:
+        return {
+            "error": False,
+            "price": status
+        }
 
 def loi_error_messages(error: str | bool | Exception =True):
     """
@@ -926,9 +1022,12 @@ def loi_error_messages(error: str | bool | Exception =True):
             print("An error occurred!")
         case _:
             print(f"An error occurred: {error}")
+
 def manage_loi_controller(): #loi is List of Items
     #todo: also add a find item function (gives price)
     #todo: also enter delete entire list option (maybe an option within delete item menu) (pls ask for confirmation from user to account for mistakes)
+
+    #todo: implement find price and delete list option in the controller
     while True:
         user_input=manage_loi_input()
         match user_input["choice"]:
@@ -936,6 +1035,12 @@ def manage_loi_controller(): #loi is List of Items
                 error=show_loi(ListOfItems.get_list())
                 if error:
                         loi_error_messages(error)
+            case "specific_item":
+                status=retrieve_price(user_input["name"])
+                if status["error"]:
+                    loi_error_messages(status["type"])
+                else:
+                    loi_user_output("get_price",[user_input["name"],status["price"]])
             case "add_item":
                 name,price =user_input["item_name"],user_input["price"]
                 try:
@@ -970,6 +1075,12 @@ def manage_loi_controller(): #loi is List of Items
                     loi_error_messages(status["type"])
                 else:
                     loi_user_output("delete_item", name)
+            case "reset_list":
+                if user_input["conf"]:
+                    ListOfItems.reset_list()
+                    loi_user_output("reset_list",1)
+                else:
+                    loi_user_output("reset_list",0)
             case "exit_loop":
                 loi_user_output("exit_loop")
                 break

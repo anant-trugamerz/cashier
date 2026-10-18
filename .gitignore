@@ -10,3 +10,6 @@ __pycache__/
 
 # Local application data
 record.json
+
+# Other files
+Testing.ipynb
