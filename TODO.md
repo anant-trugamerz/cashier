@@ -1,7 +1,7 @@
 # Cashier TODO
 
 ## Small Updates
-- [ ] Edit item prices during billing
+- [ ] Edit item prices after bill has been displayed
 - [ ] Add a "More" menu to organize additional UI features
 - [ ] Allow customer details to be edited after entry
 - [x] Display the complete item list
