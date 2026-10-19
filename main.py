@@ -10,11 +10,6 @@ The software can automatically match pricing of items and create bills, and stor
 It is a simple yet robust program and an implementation of basic software architecture.
 """
 
-#ERRORS AND DEBUGGING
-#todo: shorten the docstrings where overdocumented and add docstrings where non existent
-#todo: see screenshot for error that happened date 3/6/2026 -- can do nothing of it
-#todo: fix error (see screenshot dated 18 sept 2026)
-#todo: optimise the autosuggest mechanism
 class ListOfItems(object):
     base_list={
         "potato":20,
@@ -135,7 +130,9 @@ class Cashier(object):
         self.amt=0
         self.cust=cust
         self.custNum=cust_num
-
+    @classmethod
+    def refresh_LoI(cls):
+        Cashier.LoI=ListOfItems.get_list()
     def billing(self,item,qnt=1):
         """
         This is the core billing method which is used to add items to the billing dictionary...
@@ -148,7 +145,6 @@ class Cashier(object):
         except KeyError:
             self.item=item
             return -1
-        self.amt+=rate*qnt
         if item in self.items.keys():
             self.items[item][0]+=qnt
             return 0
@@ -179,11 +175,20 @@ class Cashier(object):
         except KeyError:
             self.item=item
             return -1
+    def total(self):
+        total=0
+        if not self.items:
+            return total
+        else:
+            for item,data in self.items.items():
+                total += int(data[0])*int(data[1])
+            return total
     def get_transaction(self):
         """
         this used to create a snapshot of the transaction
         :return: a transaction object
         """
+        self.amt=self.total()
         transaction=Transaction(self.name,self.cust,self.custNum,self.items,self.amt)
         return transaction
 
@@ -459,7 +464,6 @@ def bill_process(cashier,element):
                     "function":"removing item",
                     "quantity":None,
                     }
-                    
         case "e" | "edit" | "update":
             try:
                 quan=int(element[2])
@@ -586,7 +590,7 @@ def main_bill_controller(cash_name):
     else:
         return
     bill_header()
-    display_bill(cashier.items,cashier.amt)
+    display_bill(cashier.items,cashier.total())
     trans_data=cashier.get_transaction()
     record_handle=RecHandler(trans_data)
     record_handle.update_rec()
@@ -1023,11 +1027,12 @@ def loi_error_messages(error: str | bool | Exception =True):
         case _:
             print(f"An error occurred: {error}")
 
-def manage_loi_controller(): #loi is List of Items
+def manage_loi_controller()->bool: #loi is List of Items
     #todo: also add a find item function (gives price)
     #todo: also enter delete entire list option (maybe an option within delete item menu) (pls ask for confirmation from user to account for mistakes)
 
     #todo: implement find price and delete list option in the controller
+    changed=False
     while True:
         user_input=manage_loi_input()
         match user_input["choice"]:
@@ -1036,6 +1041,7 @@ def manage_loi_controller(): #loi is List of Items
                 if error:
                         loi_error_messages(error)
             case "specific_item":
+                #todo: incorporate autosuggest here
                 status=retrieve_price(user_input["name"])
                 if status["error"]:
                     loi_error_messages(status["type"])
@@ -1054,6 +1060,7 @@ def manage_loi_controller(): #loi is List of Items
                     loi_error_messages(status["type"])
                 else:
                     loi_user_output("add_item",[name,price])
+                    changed=True
             case "edit_price":
                 name, price= user_input["item_name"],user_input["price"]
                 try:
@@ -1067,6 +1074,7 @@ def manage_loi_controller(): #loi is List of Items
                     loi_error_messages(status["type"])
                 else:
                     loi_user_output("edit_price",[name,status["old_price"],price])
+                    changed=True
             case "delete_item":
                 name=user_input["item_name"]
                 status = loi_delete_item(name)
@@ -1075,10 +1083,12 @@ def manage_loi_controller(): #loi is List of Items
                     loi_error_messages(status["type"])
                 else:
                     loi_user_output("delete_item", name)
+                    changed=True
             case "reset_list":
                 if user_input["conf"]:
                     ListOfItems.reset_list()
                     loi_user_output("reset_list",1)
+                    changed=True
                 else:
                     loi_user_output("reset_list",0)
             case "exit_loop":
@@ -1088,6 +1098,7 @@ def manage_loi_controller(): #loi is List of Items
                 loi_error_messages("input_not_valid")
             case _:
                 loi_error_messages("action_not_defined")
+    return changed
 
 #todo: create autosuggest mechanism
 #todo: optimise autosuggest mechanism by merging functions from different segments
@@ -1119,7 +1130,7 @@ def main_UI_loop():
     action_list={1:"create_bill",2:"record_actions",3:"help_window",4:"items_list",5:"exit_loop"}
     try:
         return {"error":None,"action":action_list[choice]}
-    except IndexError:
+    except (IndexError,KeyError):
         return {"error":"input_not_valid"}
 
 def main_error_handle(error):
@@ -1161,7 +1172,9 @@ def main_controller():
             case "help_window":
                 help_controller()
             case "items_list":
-                manage_loi_controller()
+                loi_changed=manage_loi_controller()
+                if loi_changed:
+                    Cashier.refresh_LoI()
             case "exit_loop":
                 exit_handle()
                 break
