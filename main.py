@@ -258,6 +258,8 @@ class RecHandler(object):
         :param mobile: the mobile number of the customer whose transaction is to be retrieved
         """
         data=RecHandler.get_rec()
+        if not data:
+            return []
         trans=[]
         for i in data:
             if i["cust_name"]==name.lower() and i["cust_mob"]==mobile:
@@ -329,7 +331,6 @@ def auto_suggest_billing_handler(cashier,func,quan=1):
     :param func: the function in which the error occurred
     :param quan: quantity of the item
     """
-    print(f"{cashier.item} not recognised...")
     autosugg_obj=AutoSuggest(cashier.item,Cashier.LoI)
     sugg_item=autosugg_obj.autosuggest()
     if not sugg_item:
@@ -456,7 +457,15 @@ def bill_process(cashier,element):
     """
     match element[0].lower():
         case "r" | "rem" | "remove" | "d" | "delete":
-            a=cashier.rem_item(element[1])
+            try:
+                a=cashier.rem_item(process(element[1]))
+            except IndexError:
+                return {
+                    "error": True,
+                    "type": "invalid_format",
+                    "function": "removing item",
+                    "quantity": None,
+                }
             if a==-1:
                 return {
                     "error":True,
@@ -467,9 +476,24 @@ def bill_process(cashier,element):
         case "e" | "edit" | "update":
             try:
                 quan=int(element[2])
-            except (ValueError, IndexError):
+                assert quan>0
+            except IndexError:
                 quan=1
-            a=cashier.edit_quan(element[1],quan)
+            except (ValueError,AssertionError):
+                return {
+                    "error": True,
+                    "type": "invalid_quantity",
+                    "function": "editing quantity"
+                }
+            try:
+                a=cashier.edit_quan(process(element[1]),quan)
+            except IndexError:
+                return {
+                    "error": True,
+                    "type": "invalid_format",
+                    "function": "editing quantity",
+                    "quantity": None,
+                }
             if a==-1:
                 return {
                     "error":True,
@@ -481,10 +505,16 @@ def bill_process(cashier,element):
         case _:
             try:
                 quan=int(element[1])
-            except (ValueError, IndexError):
+                assert quan>0
+            except IndexError:
                 quan=1
-
-            a=cashier.billing(element[0],quan)
+            except (ValueError,AssertionError):
+                return {
+                    "error": True,
+                    "type": "invalid_quantity",
+                    "function": "billing"
+                }
+            a=cashier.billing(process(element[0]),quan)
             if a==-1:
                 return {
                     "error":True,
@@ -555,6 +585,20 @@ def correct_mobile(incorrect_mob):
         elif not mob_status["error"]:
            corr_num=incorrect_mob
     return corr_num
+
+def billing_error_messages(error, details=None):
+    match error:
+        case "item_not_defined":
+            print(f"{details} not defined!")
+        case "invalid_quantity":
+            print("The quantity is not valid! The quantity must be an integer greater than 0.\nSee help page for more information...")
+        case "invalid_format":
+            print("The format is not valid!\nSee help page for information regarding the format of billing prompt requests...")
+        case "no_data_entered":
+            print("No data entered into billing prompt!\nSee help page for more information...")
+        case _:
+            print("An error occurred...")
+
 def main_bill_controller(cash_name):
     """
     The main controller which handles the billing process by calling other billing methods...
@@ -571,11 +615,15 @@ def main_bill_controller(cash_name):
 
     #Main Billing Handle
     input_list=billing_UI_prompt()
+    if not input_list:
+        billing_error_messages("no_data_entered")
+        return
     cashier=Cashier(cash_data[0],cash_data[1],cash_data[2])
     for i in input_list:
         status=bill_process(cashier,i)
         if status["error"]:
             if status["type"]=="item_not_defined":
+                billing_error_messages("item_not_defined",cashier.item)
                 match status["function"]:
                     case "removing item":
                         auto_suggest_billing_handler(cashier,"remove_item")
@@ -585,6 +633,8 @@ def main_bill_controller(cash_name):
                         auto_suggest_billing_handler(cashier,"billing",status["quantity"])
                     case _:
                         pass
+            else:
+                billing_error_messages(status["type"])
     if bill_confirmation():
         pass
     else:
@@ -603,8 +653,12 @@ def rec_UI():
     :return: the user input action
     """
     while True:
-        print("Enter 1 to retrieve specific customer transaction record, 2 to retrieve entire customer record, 3 to delete customer record and 4 to exit record management loop...")
-        choice=int(input())
+        print("Enter 1 to retrieve specific customer transaction record, 2 to retrieve entire customer record, 3 to delete entire customer record and 4 to exit record management loop...")
+        try:
+            choice=int(input())
+        except ValueError:
+            print("Integer value was expected!")
+            return None
         match choice:
             case 1:
                 cust = process(input("Enter name of customer: "))
