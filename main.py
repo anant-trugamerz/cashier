@@ -27,18 +27,29 @@ class ListOfItems(object):
         "bread":20,
         "milk":100
     }
+    working_dir=Path(__file__).resolve().parent
+    file_path=working_dir / "menu.csv"
+    try:
+        with open(file_path,"r",newline=""):
+            pass
+    except FileNotFoundError:
+        with open(file_path, "w", newline="") as menu_file:
+            writer = csv.writer(menu_file)
+            for i, j in base_list.items():
+                writer.writerow([i, j])
+
     @classmethod
     def get_list(cls)->dict[str,int]:
         #todo: docstring
         try:
-            with open("menu.csv","r") as menu_file:
+            with open(ListOfItems.file_path,"r") as menu_file:
                 reader=csv.reader(menu_file)
                 menu={}
                 for row in reader:
                     menu.update({row[0]:int(row[1])})
             return menu
         except FileNotFoundError:
-            with open("menu.csv","w",newline="") as menu_file:
+            with open(ListOfItems.file_path,"w",newline="") as menu_file:
                 writer=csv.writer(menu_file)
                 for i,j in ListOfItems.base_list.items():
                     writer.writerow([i,j])
@@ -47,15 +58,18 @@ class ListOfItems(object):
     def add_item(cls,item: str,price: int)->int:
         """Used for appending the menu list of items saved in a csv file.
         :return: 0 if successfully updated, -1 if item already exists"""
-        with open("menu.csv","r",newline="") as menu_file:
+        try:
+            with open(ListOfItems.file_path,"r",newline="") as menu_file:
+                check=False
+                reader=csv.reader(menu_file)
+                for i in reader:
+                    if process(item) == i[0]:
+                        check=True
+        except FileNotFoundError:
             check=False
-            reader=csv.reader(menu_file)
-            for i in reader:
-                if process(item) == i[0]:
-                    check=True
         if check:
             return -1
-        with open("menu.csv","a",newline="") as menu_file:
+        with open(ListOfItems.file_path,"a",newline="") as menu_file:
             writer=csv.writer(menu_file)
             writer.writerow([item,price])
         return 0
@@ -64,16 +78,20 @@ class ListOfItems(object):
         """Used for removing existing items from the menu list csv file
         :return: 0 if successfully updated, -1 if item not found in file"""
         name = process(item_name)
-        with open("menu.csv","r",newline="") as menu_file:
-            reader=csv.reader(menu_file)
+        try:
+            with open(ListOfItems.file_path,"r",newline="") as menu_file:
+                reader=csv.reader(menu_file)
+                updated=[]
+                removed=False
+                for i in reader:
+                    if i[0].lower()==name.lower():
+                        removed = True
+                        continue
+                    updated.append(i)
+        except FileNotFoundError:
             updated=[]
             removed=False
-            for i in reader:
-                if i[0].lower()==name.lower():
-                    removed = True
-                    continue
-                updated.append(i)
-        with open("menu.csv","w",newline="") as menu_file:
+        with open(ListOfItems.file_path,"w",newline="") as menu_file:
             writer=csv.writer(menu_file)
             writer.writerows(updated)
         if removed:
@@ -82,26 +100,32 @@ class ListOfItems(object):
             return -1
     @classmethod
     def find_item(cls,item):
-        with open("menu.csv","r",newline="") as menu_file:
-            reader=csv.reader(menu_file)
-            for i in reader:
-                if i[0].lower()==item.lower():
-                    return i[1]
+        try:
+            with open(ListOfItems.file_path,"r",newline="") as menu_file:
+                reader=csv.reader(menu_file)
+                for i in reader:
+                    if i[0].lower()==item.lower():
+                        return i[1]
+        except FileNotFoundError:
+            return -1
         return -1
     @classmethod
     def edit_price(cls,item,new_price):
-        with open("menu.csv","r",newline="") as menu_file:
-            reader=csv.reader(menu_file)
-            updated=[]
+        try:
+            with open(ListOfItems.file_path,"r",newline="") as menu_file:
+                reader=csv.reader(menu_file)
+                updated=[]
+                status=False
+                for i in reader:
+                    if i[0].lower()==item.lower():
+                        status=True
+                        old_price=int(i[1])
+                        updated.append([i[0],new_price])
+                    else:
+                        updated.append(i)
+        except FileNotFoundError:
             status=False
-            for i in reader:
-                if i[0].lower()==item.lower():
-                    status=True
-                    old_price=int(i[1])
-                    updated.append([i[0],new_price])
-                else:
-                    updated.append(i)
-        with open("menu.csv","w",newline="") as menu_file:
+        with open(ListOfItems.file_path,"w",newline="") as menu_file:
             writer=csv.writer(menu_file)
             writer.writerows(updated)
         if status:
@@ -110,7 +134,7 @@ class ListOfItems(object):
             return -1
     @classmethod
     def reset_list(cls):
-        with open("menu.csv", "w", newline="") as menu_file:
+        with open(ListOfItems.file_path, "w", newline="") as menu_file:
             writer = csv.writer(menu_file)
             for i, j in ListOfItems.base_list.items():
                 writer.writerow([i, j])
@@ -215,6 +239,8 @@ class RecHandler(object):
     """
     Used to record a transaction into a JSON file for further access
     """
+    working_dir=Path(__file__).resolve().parent
+    file_path= working_dir / "record.json"
     def __init__(self,trans):
         """
         It is used to initialize a RecHandler object...
@@ -227,7 +253,7 @@ class RecHandler(object):
         """
         rec = []
         try:
-            with open("record.json","r") as f:
+            with open(RecHandler.file_path,"r") as f:
                 rec=json.load(f)
         except FileNotFoundError:
             pass
@@ -237,7 +263,7 @@ class RecHandler(object):
             rec.append(self.transaction)
         except AttributeError:
             rec= [self.transaction]
-        with open("record.json","w") as f:
+        with open(RecHandler.file_path,"w") as f:
             json.dump(rec,f)
     @classmethod
     def get_rec(cls):
@@ -245,7 +271,7 @@ class RecHandler(object):
         Used to retrieve the data from the record file...
         """
         try:
-            with open("record.json","r") as f:
+            with open(RecHandler.file_path,"r") as f:
                 rec=json.load(f)
         except FileNotFoundError:
             rec = None
@@ -270,7 +296,7 @@ class RecHandler(object):
         """
         Used to delete the data from the record file...
         """
-        with open("record.json","w") as f:
+        with open(RecHandler.file_path,"w") as f:
             json.dump([],f)
 
 class HelpHandler(object):
@@ -444,6 +470,8 @@ def billing_UI_prompt():
         x=input(">>> ")
         if x=="":
             break
+        elif x.replace(" ","")=="":
+            continue
         x=list(x.split(" "))
         input_list.append(x)
     return input_list
@@ -538,12 +566,12 @@ def display_bill(items: dict[str,list[int]], total: int =0, other_data :dict | N
     :return: None
     """
     print("-"*64)
+    if other_data:
+        print(f"{other_data["date_time_info"]}\nCashier: {process_name(other_data["cash_name"])}\nCustomer: {process_name(other_data["cust_name"])}\nMobile:{other_data["cust_mob"]}")
     if not items:
         print("No data available...")
         print("-"*64)
         return
-    if other_data:
-        print(f"{other_data["date_time_info"]}\nCashier: {process_name(other_data["cash_name"])}\nCustomer: {process_name(other_data["cust_name"])}\nMobile:{other_data["cust_mob"]}")
     print(f"{"ITEM NAME":22}{"RATE":6}{"QUANTITY":10}{"AMOUNT":5}")
     print("-"*64)
     for i,j in items.items():
@@ -596,6 +624,8 @@ def billing_error_messages(error, details=None):
             print("The format is not valid!\nSee help page for information regarding the format of billing prompt requests...")
         case "no_data_entered":
             print("No data entered into billing prompt!\nSee help page for more information...")
+        case "no_items_list":
+            print("No items list was found! Try resetting the csv file in the manage loi section...\nSee help page for more information...")
         case _:
             print("An error occurred...")
 
@@ -606,11 +636,14 @@ def main_bill_controller(cash_name):
     :param cash_name: the name of the cashier
     :return: None
     """
+    if not Cashier.LoI:
+        billing_error_messages("no_items_list")
+        return
+
     other_data = billing_UI_intro()
-
     input_number = other_data["customer_num"]
-    corr_mob = correct_mobile(input_number)
 
+    corr_mob = correct_mobile(input_number)
     cash_data=list(map(process,[cash_name,other_data["customer_name"],corr_mob]))
 
     #Main Billing Handle
@@ -641,6 +674,8 @@ def main_bill_controller(cash_name):
         return
     bill_header()
     display_bill(cashier.items,cashier.total())
+    if not cashier.items:
+        return
     trans_data=cashier.get_transaction()
     record_handle=RecHandler(trans_data)
     record_handle.update_rec()
@@ -1007,7 +1042,7 @@ def loi_user_output(action: str, details: list | int= None):
     """Displays the final closing message for each action performed successfully..."""
     match action:
         case "add_item":
-            print("Successfully added new item!",end=" ")
+            print("Successfully added new item",end=" ")
             if details:
                 print(f"'{details[0]}' with price {details[1]}!")
             else:
@@ -1021,7 +1056,7 @@ def loi_user_output(action: str, details: list | int= None):
         case "delete_item":
             print("Successfully deleted item",end=" ")
             if details:
-                print(f"'{details}!'")
+                print(f"'{details}'!")
             else:
                 print("!")
         case "get_price":
