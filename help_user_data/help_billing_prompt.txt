@@ -14,6 +14,13 @@ This prompt is used by the **Cashier Program** to enter items and their quantiti
   *Remove an item* (`r` or `d`)
   Deletes the specified item from the current bill.
 
+--Examples--
+ >>> apple 50
+ >>> e apple 5
+ >>> banana 2
+ >>> r banana
+ >>>
+
 --Exiting the Prompt--
 To finish entering items, press *Enter* on an empty line (submit a blank row).
 

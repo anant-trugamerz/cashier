@@ -2,6 +2,7 @@ import datetime as dt
 import json
 import csv
 from pathlib import Path
+import copy
 
 """
 Welcome to the Cashier Program made by Anant!
@@ -144,7 +145,7 @@ class Cashier(object):
     main cashier class which handles the billing process...
     """
     LoI=ListOfItems.get_list()
-    def __init__(self,cashier="Unknown",cust="Unknown",cust_num="NA"):
+    def __init__(self,cashier: str ="Unknown",cust: str="Unknown",cust_num: str="NA"):
         """
         Used to initialize a Cashier object
         """
@@ -232,7 +233,7 @@ class Transaction(object):
         self.cash_name=cash_name
         self.cust_name=cust_name
         self.cust_mob=cust_mob
-        self.items=items
+        self.items=copy.deepcopy(items)
         self.total=total
 
 class RecHandler(object):
@@ -461,6 +462,7 @@ def billing_UI_intro():
     print("Enter mobile number: ",end="")
     mobile=input()
     other_data = {"customer_name": cust_name, "customer_num": mobile}
+    print("-"*64)
     return other_data
 
 def billing_UI_prompt():
@@ -568,9 +570,9 @@ def display_bill(items: dict[str,list[int]], total: int =0, other_data :dict | N
     print("-"*64)
     if other_data:
         print(f"{other_data["date_time_info"]}\nCashier: {process_name(other_data["cash_name"])}\nCustomer: {process_name(other_data["cust_name"])}\nMobile:{other_data["cust_mob"]}")
+        print("-" * 64)
     if not items:
         print("No data available...")
-        print("-"*64)
         return
     print(f"{"ITEM NAME":22}{"RATE":6}{"QUANTITY":10}{"AMOUNT":5}")
     print("-"*64)
@@ -615,6 +617,7 @@ def correct_mobile(incorrect_mob):
     return corr_num
 
 def billing_error_messages(error, details=None):
+    print("-" * 64)
     match error:
         case "item_not_defined":
             print(f"{details} not defined!")
@@ -687,29 +690,38 @@ def rec_UI():
     Used to interact with the user and retrieve input regarding what action the user wants to perform regarding the record file...
     :return: the user input action
     """
-    while True:
-        print("Enter 1 to retrieve specific customer transaction record, 2 to retrieve entire customer record, 3 to delete entire customer record and 4 to exit record management loop...")
-        try:
-            choice=int(input())
-        except ValueError:
-            print("Integer value was expected!")
-            return None
-        match choice:
-            case 1:
-                cust = process(input("Enter name of customer: "))
-                mobile = process(input("Enter mobile number: "))
-                return {"action":"specific_cust_data","cust_name":cust,"cust_mobile":mobile}
-            case 2:
-                return {"action":"all_cust_data"}
-            case 3:
-                return {"action":"del_cust_data"}
-            case 4:
-                print("Exiting record management loop...")
-                print("-"*64)
-                break
-            case _:
-                print("Action not recognised")
-                print("-"*64)
+    print("-" * 64)
+    print("Enter 1 to retrieve specific customer transaction record\n2 to retrieve entire customer record\n3 to delete entire customer record\n4 to exit record management loop")
+    try:
+        choice=int(input())
+    except ValueError:
+        print("Integer value was expected!")
+        return None
+    match choice:
+        case 1:
+            cust = process(input("Enter name of customer: "))
+            mobile = process(input("Enter mobile number: "))
+            return {
+                "action":"specific_cust_data",
+                "cust_name":cust,
+                "cust_mobile":mobile
+            }
+        case 2:
+            return {
+                "action":"all_cust_data"
+            }
+        case 3:
+            return {
+                "action":"del_cust_data"
+            }
+        case 4:
+            return {
+                "action":"exit_loop"
+            }
+        case _:
+            return {
+                "action":"action_not_recognised"
+            }
 
 def get_spec_rec(name,number):
     """
@@ -743,36 +755,51 @@ def conf_del_rec():
             case _:
                 print("Enter (y/n)... to do nothing, enter (n) [without the brackets]...")
 
+def rec_user_output(action):
+    print("-" * 64)
+    match action:
+        case "del_cust_data":
+            print("Deleting customer record...")
+        case "exit_loop":
+            print("Exiting...")
+        case "action_not_recognised":
+            print("Action not recognised!\nRead the given instructions carefully...")
+        case _:
+            print("Action completed successfully!")
 def rec_controller():
     """
-        The main controller which handles the record handling process by calling other billing methods...
-        It is used to control the flow of the record handling process and allows the user to modify the existing record...
-        :return: None
-        """
-    status=rec_UI()
-    if status:
-        match status["action"]:
-            case "specific_cust_data":
-                trans_info=get_spec_rec(status["cust_name"],status["cust_mobile"])
-                if trans_info:
-                    for i in trans_info:
-                        display_bill(i["items"],i["total"],i)
-                else:
-                    display_bill({})
-            case "all_cust_data":
-                trans_info = get_all_rec()
-                if trans_info:
-                    for i in trans_info:
-                        display_bill(i["items"], i["total"], i)
-                else:
-                    display_bill({})
-            case "del_cust_data":
-                conf=conf_del_rec()
-                if conf:
-                    RecHandler.del_rec()
-            case _:
-                pass
-
+    The main controller which handles the record handling process by calling other billing methods...
+    It is used to control the flow of the record handling process and allows the user to modify the existing record...
+    :return: None
+    """
+    while True:
+        status=rec_UI()
+        if status:
+            match status["action"]:
+                case "specific_cust_data":
+                    trans_info=get_spec_rec(status["cust_name"],status["cust_mobile"])
+                    if trans_info:
+                        for i in trans_info:
+                            display_bill(i["items"],i["total"],i)
+                    else:
+                        display_bill({})
+                case "all_cust_data":
+                    trans_info = get_all_rec()
+                    if trans_info:
+                        for i in trans_info:
+                            display_bill(i["items"], i["total"], i)
+                    else:
+                        display_bill({})
+                case "del_cust_data":
+                    conf=conf_del_rec()
+                    if conf:
+                        RecHandler.del_rec()
+                    rec_user_output("del_cust_data")
+                case "exit_loop":
+                    rec_user_output("exit_loop")
+                    break
+                case "action_not_recognised":
+                    rec_user_output("action_not_recognised")
 #HELP HANDLE
 def help_input_UI():
     print(">>> ",end="")
@@ -829,10 +856,12 @@ def help_error_message(error_msg,query=None):
             print("An unknown error has occurred! Please try again...")
 
 def help_output(file):
+    print("-" * 64)
     if file=="exit":
         print("Exiting help module...")
     else:
         print(file)
+        print("-" * 64)
 
 def help_controller():
     help_output(help_retrieve_data("help_main.txt"))
@@ -863,6 +892,7 @@ def manage_loi_input()->dict[str,str | int | bool]:
     depending on the action, also takes input of necessary details needed for that action.
     :return: input details to the controller (can enter an error as 'choice' in case of invalid input)
     """
+    print("-" * 64)
     choice=input("Enter 1 to display items list or retrieve price of specific item\n2 to add an item to the list\n3 to edit the price of an existing item\n4 to delete existing item or reset list\n5 to exit... \n-- ")
     try:
         choice=int(process(choice))
@@ -870,7 +900,7 @@ def manage_loi_input()->dict[str,str | int | bool]:
         choice=None
     match choice:
         case 1:
-            print("Enter 1 to display items list, 2 to retrieve specific item price...")
+            print("Enter 1 to display items list, 2 to retrieve specific item price: ",end="")
             sub_choice=input()
             try:
                 sub_choice=int(sub_choice)
@@ -968,6 +998,7 @@ def show_loi(menu: dict[str,int])->Exception | None:
     :param menu: The dictionary which contains the items and respective prices for displaying to the user
     :return: None if no error happened, or Exception if an error happened
     """
+    print("-" * 64)
     print(f"{'Item':20} {'Rate':5}")
     try:
         for i,j in menu.items():
@@ -1040,6 +1071,7 @@ def loi_delete_item(name:str | int)->dict[str,str|bool]:
 
 def loi_user_output(action: str, details: list | int= None):
     """Displays the final closing message for each action performed successfully..."""
+    print("-" * 64)
     match action:
         case "add_item":
             print("Successfully added new item",end=" ")
@@ -1068,7 +1100,6 @@ def loi_user_output(action: str, details: list | int= None):
                 print(f"Cancelling reset list...")
         case "exit_loop":
             print("Exiting...")
-    pass
 
 def retrieve_price(name: str)->dict[str,str | bool | int]:
     """
@@ -1202,8 +1233,7 @@ def main_UI_welcome():
     print("Welcome to Cashier software!!")
     print("-"*64)
     name=input("Enter name of cashier: ")
-    print("Processing")
-    print("-"*64)
+    print("Processing...")
     return name
 
 def main_UI_loop():
@@ -1211,7 +1241,8 @@ def main_UI_loop():
     Allows the user to interact with the program in a looping structure and use the features the program has to offer...
     :return: whether an error has occurred or not, and the user input...
     """
-    print("Enter 1 to create bill, 2 for customer record actions, 3 to learn more about the program, 4 to enter items management menu and 5 to exit...")
+    print("-" * 64)
+    print("Enter 1 to create bill\n2 for customer record actions\n3 to learn more about the program\n4 to enter items management menu\n5 to exit cashier program")
     try:
         choice=int(input())
     except ValueError:
@@ -1239,8 +1270,9 @@ def exit_handle():
     Used to display exit message when the program is ending...
     :return: None
     """
+    print("-" * 64)
     print("Exiting...")
-    print("Thank you for using cashier software...")
+    print("Thank you for using cashier software!")
 
 def main_controller():
     """
