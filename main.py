@@ -350,43 +350,10 @@ class AutoSuggest(object):
             return None
 
 #MISC FUNCTIONS
-def auto_suggest_billing_handler(cashier,func,quan=1):
-    """
-    Function used to handle the autosuggestion mechanism of the program...
-    It compares the input element with the existing list of items to find a close match my calling methods from the class AutoSuggest...
-    :param cashier: a cashier object
-    :param func: the function in which the error occurred
-    :param quan: quantity of the item
-    """
-    autosugg_obj=AutoSuggest(cashier.item,Cashier.LoI)
-    sugg_item=autosugg_obj.autosuggest()
-    if not sugg_item:
-        return
-    print(f"Did you mean {sugg_item}? (y/n)",end=" ")
-    status=True
-    while status:
-        ask=process(input())
-        match ask.lower():
-            case "y":
-                match func:
-                    case "delete_item":
-                        cashier.rem_item(sugg_item)
-                    case "edit_quantity":
-                        cashier.edit_quan(sugg_item,quan)
-                    case "billing":
-                        cashier.billing(sugg_item,quan)
-                    case _:
-                        print("An unknown error has occurred...")
-                print("Updating...")
-                status=False
-            case "n":
-                print("Failed to update...")
-                status=False
-            case _:
-                print("Enter (y/n): ",end="")
-
 def process(x):
     a=str(x).split()
+    if len(a)==0:
+        return ""
     try:
         x = "".join(a)
         int(x)
@@ -416,9 +383,7 @@ def validify_number(x):
             return {"error":False}
         else:
             return {"error":True,"type":"invalid_format"}
-    except ValueError:
-        return {"error":True,"type":"invalid_type"}
-    except AssertionError:
+    except (ValueError,AssertionError):
         return {"error":True,"type":"invalid_type"}
 
 def mob_type_error_UI(mob,error):
@@ -451,7 +416,43 @@ def mob_type_error_UI(mob,error):
         case _:
             return -1
 
+def correct_mobile(incorrect_mob: str):
+    corr_num = False
+    while not corr_num:
+        mob_status=validify_number(incorrect_mob)
+        if mob_status["error"]:
+            match mob_status["type"]:
+                case "invalid_type":
+                    incorrect_mob=process(mob_type_error_UI(incorrect_mob,"invalid_type"))
+                case "invalid_format":
+                    incorrect_mob=process(mob_type_error_UI(incorrect_mob,"invalid_format"))
+        elif not mob_status["error"]:
+           corr_num=incorrect_mob
+    return corr_num
+
 #BILLING PART
+def auto_suggest_billing_handler(item):
+    """
+    Function used to handle the autosuggestion mechanism of the program...
+    It compares the input element with the existing list of items to find a close match my calling methods from the class AutoSuggest...
+    :param item: wrong name of item of which closest match is suggested
+    :return: -2 if no item was suggested, -1 if suggested item was rejected and suggested item if the suggested item was accepted
+    """
+    autosugg_obj=AutoSuggest(item,Cashier.LoI)
+    sugg_item=autosugg_obj.autosuggest()
+    if not sugg_item:
+        return -2
+    print(f"Did you mean {sugg_item}? (y/n)",end=" ")
+    while True:
+        ask=process(input())
+        match ask.lower():
+            case "y" | "ya" | "yeah" | "yes" | "yuh uh":
+                return sugg_item
+            case "n" | "nah" | "nuh uh" | "no" | "nope":
+                return -1
+            case _:
+                print("Enter (y/n): ",end="")
+
 def billing_UI_intro():
     """
     The function which handles the UI part of the billing process by taking user input regarding the billing details
@@ -474,7 +475,7 @@ def billing_UI_prompt():
             break
         elif x.replace(" ","")=="":
             continue
-        x=list(x.split(" "))
+        x=list(process(x).split(" "))
         input_list.append(x)
     return input_list
 
@@ -505,8 +506,11 @@ def bill_process(cashier,element):
                     }
         case "e" | "edit" | "update":
             try:
-                quan=int(element[2])
-                assert quan>0
+                if element[2].replace(" ", "") == "":
+                    quan = 1
+                else:
+                    quan = int(process(element[2]))
+                assert quan > 0
             except IndexError:
                 quan=1
             except (ValueError,AssertionError):
@@ -534,7 +538,10 @@ def bill_process(cashier,element):
             
         case _:
             try:
-                quan=int(element[1])
+                if element[1].replace(" ","") == "":
+                    quan=1
+                else:
+                    quan=int(process(element[1]))
                 assert quan>0
             except IndexError:
                 quan=1
@@ -602,19 +609,6 @@ def bill_confirmation()->bool:
             case _:
                 print("Please enter yes or no...")
 
-def correct_mobile(incorrect_mob):
-    corr_num = False
-    while not corr_num:
-        mob_status=validify_number(incorrect_mob)
-        if mob_status["error"]:
-            match mob_status["type"]:
-                case "invalid_type":
-                    incorrect_mob=process(mob_type_error_UI(incorrect_mob,"invalid_type"))
-                case "invalid_format":
-                    incorrect_mob=process(mob_type_error_UI(incorrect_mob,"invalid_format"))
-        elif not mob_status["error"]:
-           corr_num=incorrect_mob
-    return corr_num
 
 def billing_error_messages(error, details=None):
     print("-" * 64)
@@ -623,12 +617,17 @@ def billing_error_messages(error, details=None):
             print(f"{details} not defined!")
         case "invalid_quantity":
             print("The quantity is not valid! The quantity must be an integer greater than 0.\nSee help page for more information...")
+            print(f"Error has occurred during {details}!")
         case "invalid_format":
             print("The format is not valid!\nSee help page for information regarding the format of billing prompt requests...")
         case "no_data_entered":
             print("No data entered into billing prompt!\nSee help page for more information...")
         case "no_items_list":
             print("No items list was found! Try resetting the csv file in the manage loi section...\nSee help page for more information...")
+        case "no_item_suggested":
+            print("No item could be suggested for the given input...")
+        case "sugg_item_rejected":
+            print("The suggested item was rejected...")
         case _:
             print("An error occurred...")
 
@@ -655,22 +654,31 @@ def main_bill_controller(cash_name):
         billing_error_messages("no_data_entered")
         return
     cashier=Cashier(cash_data[0],cash_data[1],cash_data[2])
+    wrong_input={}
     for i in input_list:
         status=bill_process(cashier,i)
         if status["error"]:
             if status["type"]=="item_not_defined":
-                billing_error_messages("item_not_defined",cashier.item)
-                match status["function"]:
-                    case "removing item":
-                        auto_suggest_billing_handler(cashier,"remove_item")
-                    case "editing quantity":
-                        auto_suggest_billing_handler(cashier,"edit_quantity",status["quantity"])
-                    case "billing":
-                        auto_suggest_billing_handler(cashier,"billing",status["quantity"])
-                    case _:
-                        pass
+                wrong_name = cashier.item
+                if wrong_name not in wrong_input.keys():
+                    billing_error_messages("item_not_defined",cashier.item)
+                    sugg_item=auto_suggest_billing_handler(wrong_name)
+                    if sugg_item == -2:
+                        billing_error_messages("no_item_suggested")
+                    elif sugg_item == -1:
+                        billing_error_messages("sugg_item_rejected")
+                    wrong_input.update({wrong_name: sugg_item})
+                sugg_item=wrong_input[wrong_name]
+                if sugg_item not in [-1,-2]:
+                    match status["function"]:
+                        case "billing":
+                            bill_process(cashier,[sugg_item,str(status["quantity"])])
+                        case "removing item":
+                            bill_process(cashier,["r",sugg_item])
+                        case "editing quantity":
+                            bill_process(cashier,["e",sugg_item,str(status["quantity"])])
             else:
-                billing_error_messages(status["type"])
+                billing_error_messages(status["type"],status["function"])
     if bill_confirmation():
         pass
     else:
@@ -777,7 +785,8 @@ def rec_controller():
         if status:
             match status["action"]:
                 case "specific_cust_data":
-                    trans_info=get_spec_rec(status["cust_name"],status["cust_mobile"])
+                    mobile=correct_mobile(status["cust_mobile"])
+                    trans_info=get_spec_rec(status["cust_name"],mobile)
                     if trans_info:
                         for i in trans_info:
                             display_bill(i["items"],i["total"],i)
@@ -827,6 +836,7 @@ def help_process_query(query):
 
 def help_autosuggest_handle(item):
     source=HelpHandler.help_queries
+    source.append("exit")
     autosugg_obj=AutoSuggest(item,source)
     sugg_item=autosugg_obj.autosuggest()
     return sugg_item
@@ -878,7 +888,7 @@ def help_controller():
                     continue
             else:
                 continue
-        elif processed["exit"]:
+        if processed["exit"]:
             help_output("exit")
             break
         file_name=processed["file_name"]
@@ -1142,6 +1152,8 @@ def loi_error_messages(error: str | bool | Exception =True):
             print("Input is not valid!\nCheck the given instructions carefully...")
         case "action_not_defined":
             print("Action not defined!\nEnter a valid action!")
+        case "same_price":
+            print("The saved price of item is same as entered price!\nThe price of the item is unchanged...")
         case True:
             print("An error occurred!")
         case _:
@@ -1184,8 +1196,9 @@ def manage_loi_controller()->bool: #loi is List of Items
             case "edit_price":
                 name, price= user_input["item_name"],user_input["price"]
                 try:
-                    price=int(price)
-                except ValueError:
+                    price = int(price)
+                    assert price >= 0
+                except (ValueError, AssertionError):
                     loi_error_messages("invalid_price")
                     continue
                 status=loi_update_price(name,price)
@@ -1193,8 +1206,11 @@ def manage_loi_controller()->bool: #loi is List of Items
                     #todo: implement autosuggest over here
                     loi_error_messages(status["type"])
                 else:
-                    loi_user_output("edit_price",[name,status["old_price"],price])
-                    changed=True
+                    if status["old_price"]==price:
+                        loi_error_messages("same_price")
+                    else:
+                        loi_user_output("edit_price",[name,status["old_price"],price])
+                        changed=True
             case "delete_item":
                 name=user_input["item_name"]
                 status = loi_delete_item(name)
@@ -1273,7 +1289,7 @@ def exit_handle():
     print("-" * 64)
     print("Exiting...")
     print("Thank you for using cashier software!")
-
+    print("-" * 64)
 def main_controller():
     """
     The main controller which handles the main program and calls various methods based on user input...
