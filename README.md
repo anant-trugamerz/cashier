@@ -71,7 +71,8 @@ The exact file structure may evolve as the project develops.
 
 - [x] Core cashier and transaction management
 - [x] CSV-based menu storage and JSON transaction history
-- [x] Modular application structure
+- [x] Basic modular application structure
+- [ ] Improving modular structure by separating responsibilities into different files
 - [ ] Improve billing features and item management
 - [ ] Implement a Rich/Textual-based terminal UI
 - [ ] Add automatic stock management
