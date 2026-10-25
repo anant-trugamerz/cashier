@@ -430,16 +430,12 @@ def correct_mobile(incorrect_mob: str):
            corr_num=incorrect_mob
     return corr_num
 
-#BILLING PART
-def auto_suggest_billing_handler(item):
-    """
-    Function used to handle the autosuggestion mechanism of the program...
-    It compares the input element with the existing list of items to find a close match my calling methods from the class AutoSuggest...
-    :param item: wrong name of item of which closest match is suggested
-    :return: -2 if no item was suggested, -1 if suggested item was rejected and suggested item if the suggested item was accepted
-    """
-    autosugg_obj=AutoSuggest(item,Cashier.LoI)
+def auto_suggest_handler(source: list, item: str):
+    autosugg_obj=AutoSuggest(item,source)
     sugg_item=autosugg_obj.autosuggest()
+    return sugg_item
+
+def auto_suggest_ui(sugg_item):
     if not sugg_item:
         return -2
     print(f"Did you mean {sugg_item}? (y/n)",end=" ")
@@ -453,6 +449,7 @@ def auto_suggest_billing_handler(item):
             case _:
                 print("Enter (y/n): ",end="")
 
+#BILLING PART
 def billing_UI_intro():
     """
     The function which handles the UI part of the billing process by taking user input regarding the billing details
@@ -662,7 +659,7 @@ def main_bill_controller(cash_name):
                 wrong_name = cashier.item
                 if wrong_name not in wrong_input.keys():
                     billing_error_messages("item_not_defined",cashier.item)
-                    sugg_item=auto_suggest_billing_handler(wrong_name)
+                    sugg_item=auto_suggest_ui(auto_suggest_handler(item=wrong_name, source=list(Cashier.LoI.keys())))
                     if sugg_item == -2:
                         billing_error_messages("no_item_suggested")
                     elif sugg_item == -1:
@@ -820,7 +817,7 @@ def help_retrieve_data(filename):
     file_data=file.get_data()
     return file_data
 
-def help_process_query(query):
+def help_process_query(query)->dict[str, bool | str]:
     queries_list=HelpHandler.help_queries
     elements=query.lower().split(".")
     try:
@@ -834,34 +831,16 @@ def help_process_query(query):
     except AssertionError:
         return {"error":True,"error_msg":"invalid_format","string":query}
 
-def help_autosuggest_handle(item):
-    source=HelpHandler.help_queries
-    source.append("exit")
-    autosugg_obj=AutoSuggest(item,source)
-    sugg_item=autosugg_obj.autosuggest()
-    return sugg_item
-
-def help_autosuggest_UI(sugg_item):
-    if sugg_item:
-        choice=process(input(f"Did you mean {sugg_item}? (y/n) "))
-    else:
-        return None
-    try:
-        assert choice in ["y","n"]
-        if choice=="y":
-            return sugg_item
-        elif choice=="n":
-            return None
-    except AssertionError:
-        print("Choice not defined")
-        return None
-
 def help_error_message(error_msg,query=None):
     match error_msg:
         case "invalid_query":
             print(f"Query '{query}' not recognised...")
         case "invalid_format":
             print("Invalid format! The recognised format is- 'help.<user_query>'. Please try again...")
+        case "sugg_item_rejected":
+            print("The suggested query was rejected...")
+        case "no_item_suggested":
+            print("No similar query could be found by autosuggest module...")
         case _:
             print("An unknown error has occurred! Please try again...")
 
@@ -881,16 +860,25 @@ def help_controller():
         if processed["error"]:
             help_error_message(processed["error_msg"],processed["string"])
             if processed["error_msg"]=="invalid_query":
-                sugg_query=help_autosuggest_UI(help_autosuggest_handle(processed["string"]))
-                if sugg_query:
+                source_list=HelpHandler.help_queries
+                source_list.append("exit")
+                sugg_query=auto_suggest_ui(auto_suggest_handler(item=processed["string"], source=source_list))
+                if sugg_query not in [-1,-2]:
                     processed=help_process_query("help."+sugg_query)
-                else:
+                elif sugg_query == -1:
+                    help_error_message("sugg_item_rejected")
+                    continue
+                elif sugg_query == -2:
+                    help_error_message("no_item_suggested")
                     continue
             else:
                 continue
-        if processed["exit"]:
-            help_output("exit")
-            break
+        try:
+            if processed["exit"]:
+                help_output("exit")
+                break
+        except KeyError:
+            pass
         file_name=processed["file_name"]
         file_data=help_retrieve_data(file_name)
         help_output(file_data)
