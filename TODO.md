@@ -1,7 +1,7 @@
 # Cashier TODO
 
 ## Small Updates
-- [ ] Optimization of autosuggest mechanism 
+- [x] Optimization of autosuggest mechanism 
 - [ ] Edit item prices after bill has been displayed
 - [ ] Add a "More" menu to organize additional UI features
 - [ ] Allow customer details to be edited after entry
@@ -18,5 +18,6 @@
 - [ ] Build a Rich/Textual-based terminal UI
 - [ ] Implement automatic stock management
 - [ ] Separate responsibilities into different files
+
 ## Major Milestone
 - [ ] Implement a desktop GUI

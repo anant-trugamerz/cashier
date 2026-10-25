@@ -962,7 +962,7 @@ def manage_loi_input()->dict[str,str | int | bool]:
                         "item_name": name
                     }
                 case 2:
-                    conf=input("Are you sure you want to reset list? \nAll changes made to the base list till date will be reset and inbuilt base list will remain. \nChanges cannot be undone! \nDo you want to continue? (y/n): ")
+                    conf=input("Are you sure you want to reset list? \nAll changes made to the base list till date will be reset and inbuilt base list will remain. \nThis cannot be undone! \nDo you want to continue? (y/n): ")
                     match process(conf):
                         case "y" | "ya" | "yes" | "yeah":
                             return {
@@ -1142,16 +1142,16 @@ def loi_error_messages(error: str | bool | Exception =True):
             print("Action not defined!\nEnter a valid action!")
         case "same_price":
             print("The saved price of item is same as entered price!\nThe price of the item is unchanged...")
+        case "sugg_item_rejected":
+            print("The suggested item was rejected!")
+        case "no_item_suggested":
+            print("No item could be suggested by autosuggest module!")
         case True:
             print("An error occurred!")
         case _:
             print(f"An error occurred: {error}")
 
 def manage_loi_controller()->bool: #loi is List of Items
-    #todo: also add a find item function (gives price)
-    #todo: also enter delete entire list option (maybe an option within delete item menu) (pls ask for confirmation from user to account for mistakes)
-
-    #todo: implement find price and delete list option in the controller
     changed=False
     while True:
         user_input=manage_loi_input()
@@ -1161,12 +1161,24 @@ def manage_loi_controller()->bool: #loi is List of Items
                 if error:
                         loi_error_messages(error)
             case "specific_item":
-                #todo: incorporate autosuggest here
                 status=retrieve_price(user_input["name"])
                 if status["error"]:
                     loi_error_messages(status["type"])
-                else:
-                    loi_user_output("get_price",[user_input["name"],status["price"]])
+                    if status["type"]=="item_not_found":
+                        sugg_item=auto_suggest_ui(auto_suggest_handler(item=user_input["name"],source= list(ListOfItems.get_list().keys())))
+                        if sugg_item not in [-1,-2]:
+                            status=retrieve_price(sugg_item) #todo: work on logic, this logic is error prone
+                        elif sugg_item == -1:
+                            loi_error_messages("sugg_item_rejected")
+                            continue
+                        elif sugg_item == -2:
+                            loi_error_messages("no_item_suggested")
+                            continue
+                        else:
+                            continue
+                    else:
+                        continue
+                loi_user_output("get_price",[user_input["name"],status["price"]])
             case "add_item":
                 name,price =user_input["item_name"],user_input["price"]
                 try:
@@ -1191,23 +1203,51 @@ def manage_loi_controller()->bool: #loi is List of Items
                     continue
                 status=loi_update_price(name,price)
                 if status["error"]:
-                    #todo: implement autosuggest over here
                     loi_error_messages(status["type"])
-                else:
-                    if status["old_price"]==price:
-                        loi_error_messages("same_price")
+                    if status["type"] == "item_not_found":
+                        sugg_item = auto_suggest_ui(
+                            auto_suggest_handler(item=name, source=list(ListOfItems.get_list().keys())))
+                        if sugg_item not in [-1, -2]:
+                            name=sugg_item
+                            status = loi_update_price(name, price) #todo: some errors might escape here, work on the logic
+                        elif sugg_item == -1:
+                            loi_error_messages("sugg_item_rejected")
+                            continue
+                        elif sugg_item == -2:
+                            loi_error_messages("no_item_suggested")
+                            continue
+                        else:
+                            continue
                     else:
-                        loi_user_output("edit_price",[name,status["old_price"],price])
-                        changed=True
+                        continue
+                if status["old_price"]==price:
+                    loi_error_messages("same_price")
+                else:
+                    loi_user_output("edit_price",[name,status["old_price"],price])
+                    changed=True
             case "delete_item":
                 name=user_input["item_name"]
                 status = loi_delete_item(name)
                 if status["error"]:
-                    #todo: implement autosuggest over here
                     loi_error_messages(status["type"])
-                else:
-                    loi_user_output("delete_item", name)
-                    changed=True
+                    if status["type"] == "item_not_found":
+                        sugg_item = auto_suggest_ui(
+                            auto_suggest_handler(item=name, source=list(ListOfItems.get_list().keys())))
+                        if sugg_item not in [-1, -2]:
+                            name = sugg_item
+                            loi_delete_item(name) #todo: this logic might be fragile, work on this
+                        elif sugg_item == -1:
+                            loi_error_messages("sugg_item_rejected")
+                            continue
+                        elif sugg_item == -2:
+                            loi_error_messages("no_item_suggested")
+                            continue
+                        else:
+                            continue
+                    else:
+                        continue
+                loi_user_output("delete_item", name)
+                changed=True
             case "reset_list":
                 if user_input["conf"]:
                     ListOfItems.reset_list()
@@ -1223,9 +1263,6 @@ def manage_loi_controller()->bool: #loi is List of Items
             case _:
                 loi_error_messages("action_not_defined")
     return changed
-
-#todo: create autosuggest mechanism
-#todo: optimise autosuggest mechanism by merging functions from different segments
 
 #MAIN PART
 def main_UI_welcome():
@@ -1310,4 +1347,4 @@ if __name__ == '__main__':
     try:
         main_controller()
     except KeyboardInterrupt:
-        print('\nExiting...')
+        exit_handle()
