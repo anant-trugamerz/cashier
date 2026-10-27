@@ -376,7 +376,7 @@ def process_name(name):
         output=output+" "+i.capitalize()
     return output
 
-def validify_number(x):
+def validate_number(x):
     try:
         assert int(x)>0
         if len(str(x))==10:
@@ -419,7 +419,7 @@ def mob_type_error_UI(mob,error):
 def correct_mobile(incorrect_mob: str):
     corr_num = False
     while not corr_num:
-        mob_status=validify_number(incorrect_mob)
+        mob_status=validate_number(incorrect_mob)
         if mob_status["error"]:
             match mob_status["type"]:
                 case "invalid_type":
@@ -497,7 +497,7 @@ def bill_process(cashier,element):
             if a==-1:
                 return {
                     "error":True,
-                    "type":"item_not_defined",
+                    "type":"item_not_billed",
                     "function":"removing item",
                     "quantity":None,
                     }
@@ -594,6 +594,7 @@ def bill_confirmation()->bool:
     """
     This function allows the user to confirm the bill ie the bill will be saved or cancel the bill ie the bill will not be saved.
     """
+    print("-"*64)
     while True:
         print("Confirm bill? (y/n) ", end="")
         conf=process(input(""))
@@ -625,6 +626,8 @@ def billing_error_messages(error, details=None):
             print("No item could be suggested for the given input...")
         case "sugg_item_rejected":
             print("The suggested item was rejected...")
+        case "item_not_billed":
+            print("The item did not exist in bill!\nNo item found to remove...")
         case _:
             print("An error occurred...")
 
@@ -654,28 +657,29 @@ def main_bill_controller(cash_name):
     wrong_input={}
     for i in input_list:
         status=bill_process(cashier,i)
+        if status["error"] and status["type"] == "item_not_defined":
+            wrong_name = cashier.item
+            if wrong_name not in wrong_input.keys():
+                billing_error_messages("item_not_defined", cashier.item)
+                sugg_item = auto_suggest_ui(auto_suggest_handler(item=wrong_name, source=list(Cashier.LoI.keys())))
+                if sugg_item == -2:
+                    billing_error_messages("no_item_suggested")
+                elif sugg_item == -1:
+                    billing_error_messages("sugg_item_rejected")
+                wrong_input.update({wrong_name: sugg_item})
+            sugg_item = wrong_input[wrong_name]
+            if sugg_item not in [-1, -2]:
+                match status["function"]:
+                    case "billing":
+                        status=bill_process(cashier, [sugg_item, str(status["quantity"])])
+                    case "removing item":
+                        status=bill_process(cashier, ["r", sugg_item])
+                    case "editing quantity":
+                        status=bill_process(cashier, ["e", sugg_item, str(status["quantity"])])
+            elif sugg_item in [-1,-2]:
+                continue
         if status["error"]:
-            if status["type"]=="item_not_defined":
-                wrong_name = cashier.item
-                if wrong_name not in wrong_input.keys():
-                    billing_error_messages("item_not_defined",cashier.item)
-                    sugg_item=auto_suggest_ui(auto_suggest_handler(item=wrong_name, source=list(Cashier.LoI.keys())))
-                    if sugg_item == -2:
-                        billing_error_messages("no_item_suggested")
-                    elif sugg_item == -1:
-                        billing_error_messages("sugg_item_rejected")
-                    wrong_input.update({wrong_name: sugg_item})
-                sugg_item=wrong_input[wrong_name]
-                if sugg_item not in [-1,-2]:
-                    match status["function"]:
-                        case "billing":
-                            bill_process(cashier,[sugg_item,str(status["quantity"])])
-                        case "removing item":
-                            bill_process(cashier,["r",sugg_item])
-                        case "editing quantity":
-                            bill_process(cashier,["e",sugg_item,str(status["quantity"])])
-            else:
-                billing_error_messages(status["type"],status["function"])
+            billing_error_messages(status["type"],status["function"])
     if bill_confirmation():
         pass
     else:
@@ -857,22 +861,22 @@ def help_controller():
     while True:
         query=help_input_UI()
         processed=help_process_query(query)
+        if processed["error"] and processed["error_msg"] == "invalid_query":
+            help_error_message(processed["error_msg"],processed["string"])
+            source_list = HelpHandler.help_queries
+            source_list.append("exit")
+            sugg_query = auto_suggest_ui(auto_suggest_handler(item=processed["string"], source=source_list))
+            if sugg_query not in [-1, -2]:
+                processed = help_process_query("help." + sugg_query)
+            elif sugg_query == -1:
+                help_error_message("sugg_item_rejected")
+                continue
+            elif sugg_query == -2:
+                help_error_message("no_item_suggested")
+                continue
         if processed["error"]:
             help_error_message(processed["error_msg"],processed["string"])
-            if processed["error_msg"]=="invalid_query":
-                source_list=HelpHandler.help_queries
-                source_list.append("exit")
-                sugg_query=auto_suggest_ui(auto_suggest_handler(item=processed["string"], source=source_list))
-                if sugg_query not in [-1,-2]:
-                    processed=help_process_query("help."+sugg_query)
-                elif sugg_query == -1:
-                    help_error_message("sugg_item_rejected")
-                    continue
-                elif sugg_query == -2:
-                    help_error_message("no_item_suggested")
-                    continue
-            else:
-                continue
+            continue
         try:
             if processed["exit"]:
                 help_output("exit")
@@ -1161,24 +1165,27 @@ def manage_loi_controller()->bool: #loi is List of Items
                 if error:
                         loi_error_messages(error)
             case "specific_item":
-                status=retrieve_price(user_input["name"])
-                if status["error"]:
+                name=user_input["name"]
+                status=retrieve_price(name)
+                if status["error"] and status["type"] == "item_not_found":
                     loi_error_messages(status["type"])
-                    if status["type"]=="item_not_found":
-                        sugg_item=auto_suggest_ui(auto_suggest_handler(item=user_input["name"],source= list(ListOfItems.get_list().keys())))
-                        if sugg_item not in [-1,-2]:
-                            status=retrieve_price(sugg_item) #todo: work on logic, this logic is error prone
-                        elif sugg_item == -1:
-                            loi_error_messages("sugg_item_rejected")
-                            continue
-                        elif sugg_item == -2:
-                            loi_error_messages("no_item_suggested")
-                            continue
-                        else:
-                            continue
+                    sugg_item = auto_suggest_ui(
+                        auto_suggest_handler(item=user_input["name"], source=list(ListOfItems.get_list().keys())))
+                    if sugg_item not in [-1, -2]:
+                        name=sugg_item
+                        status = retrieve_price(name)
+                    elif sugg_item == -1:
+                        loi_error_messages("sugg_item_rejected")
+                        continue
+                    elif sugg_item == -2:
+                        loi_error_messages("no_item_suggested")
+                        continue
                     else:
                         continue
-                loi_user_output("get_price",[user_input["name"],status["price"]])
+                if status["error"]:
+                    loi_error_messages(status["type"])
+                    continue
+                loi_user_output("get_price",[name,status["price"]])
             case "add_item":
                 name,price =user_input["item_name"],user_input["price"]
                 try:
@@ -1197,29 +1204,28 @@ def manage_loi_controller()->bool: #loi is List of Items
                 name, price= user_input["item_name"],user_input["price"]
                 try:
                     price = int(price)
-                    assert price >= 0
+                    assert price > 0
                 except (ValueError, AssertionError):
                     loi_error_messages("invalid_price")
                     continue
                 status=loi_update_price(name,price)
-                if status["error"]:
+                if status["error"] and status["type"] == "item_not_found":
                     loi_error_messages(status["type"])
-                    if status["type"] == "item_not_found":
-                        sugg_item = auto_suggest_ui(
-                            auto_suggest_handler(item=name, source=list(ListOfItems.get_list().keys())))
-                        if sugg_item not in [-1, -2]:
-                            name=sugg_item
-                            status = loi_update_price(name, price) #todo: some errors might escape here, work on the logic
-                        elif sugg_item == -1:
-                            loi_error_messages("sugg_item_rejected")
-                            continue
-                        elif sugg_item == -2:
-                            loi_error_messages("no_item_suggested")
-                            continue
-                        else:
-                            continue
+                    sugg_item = auto_suggest_ui(auto_suggest_handler(item=name, source=list(ListOfItems.get_list().keys())))
+                    if sugg_item not in [-1, -2]:
+                        name=sugg_item
+                        status = loi_update_price(name, price)
+                    elif sugg_item == -1:
+                        loi_error_messages("sugg_item_rejected")
+                        continue
+                    elif sugg_item == -2:
+                        loi_error_messages("no_item_suggested")
+                        continue
                     else:
                         continue
+                if status["error"]:
+                    loi_error_messages(status["type"])
+                    continue
                 if status["old_price"]==price:
                     loi_error_messages("same_price")
                 else:
@@ -1228,24 +1234,23 @@ def manage_loi_controller()->bool: #loi is List of Items
             case "delete_item":
                 name=user_input["item_name"]
                 status = loi_delete_item(name)
-                if status["error"]:
+                if status["error"] and status["type"] == "item_not_found":
                     loi_error_messages(status["type"])
-                    if status["type"] == "item_not_found":
-                        sugg_item = auto_suggest_ui(
-                            auto_suggest_handler(item=name, source=list(ListOfItems.get_list().keys())))
-                        if sugg_item not in [-1, -2]:
-                            name = sugg_item
-                            loi_delete_item(name) #todo: this logic might be fragile, work on this
-                        elif sugg_item == -1:
-                            loi_error_messages("sugg_item_rejected")
-                            continue
-                        elif sugg_item == -2:
-                            loi_error_messages("no_item_suggested")
-                            continue
-                        else:
-                            continue
+                    sugg_item = auto_suggest_ui(auto_suggest_handler(item=name, source=list(ListOfItems.get_list().keys())))
+                    if sugg_item not in [-1, -2]:
+                        name = sugg_item
+                        status = loi_delete_item(name)
+                    elif sugg_item == -1:
+                        loi_error_messages("sugg_item_rejected")
+                        continue
+                    elif sugg_item == -2:
+                        loi_error_messages("no_item_suggested")
+                        continue
                     else:
                         continue
+                if status["error"]:
+                    loi_error_messages(status["type"])
+                    continue
                 loi_user_output("delete_item", name)
                 changed=True
             case "reset_list":
