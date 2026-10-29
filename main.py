@@ -12,6 +12,9 @@ It is a simple yet robust program and an implementation of basic software archit
 """
 
 class ListOfItems(object):
+    """
+    Class which manages the csv file containing the items list. Deals with retrieving names and pries, updating prices, adding and deleting items etc.
+    """
     base_list={
         "potato":20,
         "tomato":30,
@@ -41,7 +44,8 @@ class ListOfItems(object):
 
     @classmethod
     def get_list(cls)->dict[str,int]:
-        #todo: docstring
+        """Retrieves data from the items list csv file
+        :return: Dictionary with item names as keys and prices as values"""
         try:
             with open(ListOfItems.file_path,"r") as menu_file:
                 reader=csv.reader(menu_file)
@@ -101,6 +105,10 @@ class ListOfItems(object):
             return -1
     @classmethod
     def find_item(cls,item):
+        """
+        Used to retrieve the price of an existing item from the items list
+        :return: -1 if item was not found or list doesn't exist and price of item if item was found in the csv file
+        """
         try:
             with open(ListOfItems.file_path,"r",newline="") as menu_file:
                 reader=csv.reader(menu_file)
@@ -466,14 +474,16 @@ def billing_UI_intro():
 def billing_UI_prompt():
     print("PROMPT BELOW...")
     input_list=[]
+    i=1
     while True:
-        x=input(">>> ")
+        x=input(f"[{i}] ")
         if x=="":
             break
         elif x.replace(" ","")=="":
             continue
         x=list(process(x).split(" "))
         input_list.append(x)
+        i+=1
     return input_list
 
 def bill_process(cashier,element):
@@ -608,8 +618,10 @@ def bill_confirmation()->bool:
                 print("Please enter yes or no...")
 
 
-def billing_error_messages(error, details=None):
+def billing_error_messages(error, line_num=None, details=None):
     print("-" * 64)
+    if line_num:
+        print(f"Error has occured in line {line_num}")
     match error:
         case "item_not_defined":
             print(f"{details} not defined!")
@@ -657,10 +669,12 @@ def main_bill_controller(cash_name):
     wrong_input={}
     for i in input_list:
         status=bill_process(cashier,i)
+        #todo: rework logic of autosuggest so it shows errors from multiple lines
         if status["error"] and status["type"] == "item_not_defined":
+            line_num = input_list.index(i) + 1
             wrong_name = cashier.item
             if wrong_name not in wrong_input.keys():
-                billing_error_messages("item_not_defined", cashier.item)
+                billing_error_messages("item_not_defined", details=cashier.item, line_num=line_num)
                 sugg_item = auto_suggest_ui(auto_suggest_handler(item=wrong_name, source=list(Cashier.LoI.keys())))
                 if sugg_item == -2:
                     billing_error_messages("no_item_suggested")
@@ -679,7 +693,8 @@ def main_bill_controller(cash_name):
             elif sugg_item in [-1,-2]:
                 continue
         if status["error"]:
-            billing_error_messages(status["type"],status["function"])
+            line_num = input_list.index(i) + 1
+            billing_error_messages(status["type"],line_num=line_num,details=status["function"])
     if bill_confirmation():
         pass
     else:
@@ -1316,7 +1331,7 @@ def exit_handle():
     Used to display exit message when the program is ending...
     :return: None
     """
-    print("-" * 64)
+    print("\n-" * 64)
     print("Exiting...")
     print("Thank you for using cashier software!")
     print("-" * 64)
