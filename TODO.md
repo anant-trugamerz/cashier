@@ -19,5 +19,6 @@
 - [ ] Build a Rich/Textual-based terminal UI
 - [ ] Implement automatic stock management
 
-## Major Milestone
+## Future Milestones
 - [ ] Implement a desktop GUI
+- [ ] Record management using SQLite database 
