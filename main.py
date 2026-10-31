@@ -3,6 +3,7 @@ import json
 import csv
 from pathlib import Path
 import copy
+from typing import TypedDict, NotRequired, Literal
 
 """
 Welcome to the Cashier Program made by Anant!
@@ -11,6 +12,14 @@ The software can automatically match pricing of items and create bills, and stor
 It is a simple yet robust program and an implementation of basic software architecture.
 """
 
+#TypedDict Segment
+class LoiManagementInputDict(TypedDict):
+    choice: str
+    item_name: NotRequired[str]
+    price: NotRequired[str]
+    conf: NotRequired[bool]
+
+#Processing Modules Segment
 class ListOfItems(object):
     """
     Class which manages the csv file containing the items list. Deals with retrieving names and pries, updating prices, adding and deleting items etc.
@@ -104,7 +113,7 @@ class ListOfItems(object):
         else:
             return -1
     @classmethod
-    def find_item(cls,item):
+    def find_item(cls,item)-> str | Literal[-1]:
         """
         Used to retrieve the price of an existing item from the items list
         :return: -1 if item was not found or list doesn't exist and price of item if item was found in the csv file
@@ -443,7 +452,7 @@ def auto_suggest_handler(source: list, item: str):
     sugg_item=autosugg_obj.autosuggest()
     return sugg_item
 
-def auto_suggest_ui(sugg_item)->str | -1 | -2:
+def auto_suggest_ui(sugg_item)->str | Literal[-1] | Literal[-2]:
     if not sugg_item:
         return -2
     print(f"Did you mean {sugg_item}? (y/n)",end=" ")
@@ -836,19 +845,31 @@ def help_retrieve_data(filename):
     file_data=file.get_data()
     return file_data
 
-def help_process_query(query)->dict[str, bool | str]:
+def help_process_query(query)->dict[str, str]:
     queries_list=HelpHandler.help_queries
     elements=query.lower().split(".")
     try:
         assert len(elements)==2 and elements[0] == "help"
         if elements[1]=="exit":
-            return {"error":False,"exit":True}
+            return {
+                "error":"no_error",
+                "file_name": "exit"
+            }
         elif elements[1] in queries_list:
-            return {"error":False,"exit":False,"file_name":"help_"+str(elements[1]+".txt")}
+            return {
+                    "error":"no_error",
+                    "file_name": "help_"+str(elements[1]+".txt")
+                    }
         else:
-            return {"error":True,"error_msg":"invalid_query","string":elements[1]}
+            return {
+                "error":"invalid_query",
+                "string":elements[1]
+            }
     except AssertionError:
-        return {"error":True,"error_msg":"invalid_format","string":query}
+        return {
+            "error":"invalid_format",
+            "string":query
+        }
 
 def help_error_message(error_msg,query=None):
     match error_msg:
@@ -876,8 +897,8 @@ def help_controller():
     while True:
         query=help_input_UI()
         processed=help_process_query(query)
-        if processed["error"] and processed["error_msg"] == "invalid_query":
-            help_error_message(processed["error_msg"],processed["string"])
+        if processed["error"] == "invalid_query":
+            help_error_message(processed["error"],processed["string"])
             source_list = HelpHandler.help_queries
             source_list.append("exit")
             sugg_query = auto_suggest_ui(auto_suggest_handler(item=processed["string"], source=source_list))
@@ -889,21 +910,18 @@ def help_controller():
             elif sugg_query == -2:
                 help_error_message("no_item_suggested")
                 continue
-        if processed["error"]:
-            help_error_message(processed["error_msg"],processed["string"])
+        if processed["error"]!="no_error":
+            help_error_message(processed["error"],processed["string"])
             continue
-        try:
-            if processed["exit"]:
-                help_output("exit")
-                break
-        except KeyError:
-            pass
         file_name=processed["file_name"]
+        if file_name=="exit":
+            help_output("exit")
+            break
         file_data=help_retrieve_data(file_name)
         help_output(file_data)
 
 #LIST OF ITEMS MANAGEMENT PART
-def manage_loi_input()->dict[str,str | int | bool]:
+def manage_loi_input()->LoiManagementInputDict:
     """
     Takes user input regarding what action they want to perform,
     depending on the action, also takes input of necessary details needed for that action.
@@ -934,7 +952,7 @@ def manage_loi_input()->dict[str,str | int | bool]:
                     name=process(input("Enter name of item: "))
                     return {
                         "choice":"specific_item",
-                        "name":name
+                        "item_name":name
                     }
                 case _:
                     return {
@@ -1063,7 +1081,7 @@ def loi_update_price(item: str,price: int)->dict:
             "old_price": status
         }
 
-def loi_delete_item(name:str | -1)->dict[str,str|bool]:
+def loi_delete_item(name:str | Literal[-1])->dict[str,str|bool]:
     """
     Deletes an existing item in the csv file (list of items).
     If '-1' (integer) is passed as name, then it resets entire list
@@ -1085,7 +1103,7 @@ def loi_delete_item(name:str | -1)->dict[str,str|bool]:
             "error": False
         }
 
-def loi_user_output(action: str, details: list | int | None = None):
+def loi_user_output(action: str, details: str | list | int | None = None):
     """Displays the final closing message for each action performed successfully..."""
     #todo: here if details received an integer and if i try to index it, it will raise exception... neither does the function prevent list details to be entered as integers
     print("-" * 64)
@@ -1118,30 +1136,30 @@ def loi_user_output(action: str, details: list | int | None = None):
         case "exit_loop":
             print("Exiting...")
 
-def retrieve_price(name: str)->dict[str,str | bool | int]:
+def retrieve_price(name: str)->dict[str,str]:
     """
     Used to retrieve the price of a specific item from the items list
     :return: status about error and type of error or price of item in case of successful execution
     """
     status=ListOfItems.find_item(name)
     try:
-        status=int(status)
+        int(status)
     except ValueError:
         status=-2
     if status==-1:
         return {
-            "error": True,
+            "error": "item_not_found",
             "type": "item_not_found"
         }
     elif status==-2:
         return {
-            "error": True,
+            "error": "unknown",
             "type": "unknown"
         }
     else:
         return {
-            "error": False,
-            "price": status
+            "error": "no_error",
+            "price": str(status)
         }
 
 def loi_error_messages(error: str | bool | Exception =True):
@@ -1180,12 +1198,12 @@ def manage_loi_controller()->bool: #loi is List of Items
                 if error:
                         loi_error_messages(error)
             case "specific_item":
-                name=user_input["name"]
-                status=retrieve_price(name) #todo: TypedDict will help here
-                if status["error"] and status["type"] == "item_not_found":
+                name=user_input["item_name"]
+                status=retrieve_price(name)
+                if status["error"] == "item_not_found":
                     loi_error_messages(status["type"]) #todo: TypedDict will help
                     sugg_item = auto_suggest_ui(
-                        auto_suggest_handler(item=user_input["name"], source=list(ListOfItems.get_list().keys()))) #todo: TypedDict will help
+                        auto_suggest_handler(item=user_input["item_name"], source=list(ListOfItems.get_list().keys()))) #todo: TypedDict will help
                     if sugg_item not in [-1, -2]:
                         name=sugg_item
                         status = retrieve_price(name)
@@ -1197,7 +1215,7 @@ def manage_loi_controller()->bool: #loi is List of Items
                         continue
                     else:
                         continue
-                if status["error"]:
+                if status["error"]!="no_error":
                     loi_error_messages(status["type"]) #todo: TypedDict will help
                     continue
                 loi_user_output("get_price",[name,status["price"]])
@@ -1209,7 +1227,7 @@ def manage_loi_controller()->bool: #loi is List of Items
                 except (ValueError,AssertionError):
                     loi_error_messages("invalid_price")
                     continue
-                status=loi_add_item(name,price) #todo: TypedDict will help
+                status=loi_add_item(name,price)
                 if status["error"]:
                     loi_error_messages(status["type"])
                 else:
@@ -1223,10 +1241,10 @@ def manage_loi_controller()->bool: #loi is List of Items
                 except (ValueError, AssertionError):
                     loi_error_messages("invalid_price")
                     continue
-                status=loi_update_price(name,price) #todo: TypedDict will help
+                status=loi_update_price(name,price)
                 if status["error"] and status["type"] == "item_not_found":
                     loi_error_messages(status["type"])
-                    sugg_item = auto_suggest_ui(auto_suggest_handler(item=name, source=list(ListOfItems.get_list().keys()))) #todo: TypedDict will help
+                    sugg_item = auto_suggest_ui(auto_suggest_handler(item=name, source=list(ListOfItems.get_list().keys())))
                     if sugg_item not in [-1, -2]:
                         name=sugg_item
                         status = loi_update_price(name, price)
@@ -1247,7 +1265,7 @@ def manage_loi_controller()->bool: #loi is List of Items
                     loi_user_output("edit_price",[name,status["old_price"],price])
                     changed=True
             case "delete_item":
-                name=user_input["item_name"]
+                name: str=user_input["item_name"]
                 status = loi_delete_item(name)
                 if status["error"] and status["type"] == "item_not_found":
                     loi_error_messages(status["type"])
@@ -1331,7 +1349,7 @@ def exit_handle():
     Used to display exit message when the program is ending...
     :return: None
     """
-    print("\n-" * 64)
+    print("\n","-" * 64)
     print("Exiting...")
     print("Thank you for using cashier software!")
     print("-" * 64)
