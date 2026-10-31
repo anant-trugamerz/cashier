@@ -292,7 +292,7 @@ class RecHandler(object):
         :param name: the name of the customer whose transaction is to be retrieved
         :param mobile: the mobile number of the customer whose transaction is to be retrieved
         """
-        data=RecHandler.get_rec()
+        data: list | None =RecHandler.get_rec()
         if not data:
             return []
         trans=[]
@@ -443,7 +443,7 @@ def auto_suggest_handler(source: list, item: str):
     sugg_item=autosugg_obj.autosuggest()
     return sugg_item
 
-def auto_suggest_ui(sugg_item):
+def auto_suggest_ui(sugg_item)->str | -1 | -2:
     if not sugg_item:
         return -2
     print(f"Did you mean {sugg_item}? (y/n)",end=" ")
@@ -621,7 +621,7 @@ def bill_confirmation()->bool:
 def billing_error_messages(error, line_num=None, details=None):
     print("-" * 64)
     if line_num:
-        print(f"Error has occured in line {line_num}")
+        print(f"Error has occurred in line {line_num}")
     match error:
         case "item_not_defined":
             print(f"{details} not defined!")
@@ -809,7 +809,7 @@ def rec_controller():
                     else:
                         display_bill({})
                 case "all_cust_data":
-                    trans_info = get_all_rec()
+                    trans_info: list | None = get_all_rec()
                     if trans_info:
                         for i in trans_info:
                             display_bill(i["items"], i["total"], i)
@@ -1063,7 +1063,7 @@ def loi_update_price(item: str,price: int)->dict:
             "old_price": status
         }
 
-def loi_delete_item(name:str | int)->dict[str,str|bool]:
+def loi_delete_item(name:str | -1)->dict[str,str|bool]:
     """
     Deletes an existing item in the csv file (list of items).
     If '-1' (integer) is passed as name, then it resets entire list
@@ -1074,7 +1074,6 @@ def loi_delete_item(name:str | int)->dict[str,str|bool]:
         return {
             "error": False
         }
-
     status=ListOfItems.del_item(name)
     if status==-1:
         return {
@@ -1086,8 +1085,9 @@ def loi_delete_item(name:str | int)->dict[str,str|bool]:
             "error": False
         }
 
-def loi_user_output(action: str, details: list | int= None):
+def loi_user_output(action: str, details: list | int | None = None):
     """Displays the final closing message for each action performed successfully..."""
+    #todo: here if details received an integer and if i try to index it, it will raise exception... neither does the function prevent list details to be entered as integers
     print("-" * 64)
     match action:
         case "add_item":
@@ -1181,11 +1181,11 @@ def manage_loi_controller()->bool: #loi is List of Items
                         loi_error_messages(error)
             case "specific_item":
                 name=user_input["name"]
-                status=retrieve_price(name)
+                status=retrieve_price(name) #todo: TypedDict will help here
                 if status["error"] and status["type"] == "item_not_found":
-                    loi_error_messages(status["type"])
+                    loi_error_messages(status["type"]) #todo: TypedDict will help
                     sugg_item = auto_suggest_ui(
-                        auto_suggest_handler(item=user_input["name"], source=list(ListOfItems.get_list().keys())))
+                        auto_suggest_handler(item=user_input["name"], source=list(ListOfItems.get_list().keys()))) #todo: TypedDict will help
                     if sugg_item not in [-1, -2]:
                         name=sugg_item
                         status = retrieve_price(name)
@@ -1198,7 +1198,7 @@ def manage_loi_controller()->bool: #loi is List of Items
                     else:
                         continue
                 if status["error"]:
-                    loi_error_messages(status["type"])
+                    loi_error_messages(status["type"]) #todo: TypedDict will help
                     continue
                 loi_user_output("get_price",[name,status["price"]])
             case "add_item":
@@ -1209,7 +1209,7 @@ def manage_loi_controller()->bool: #loi is List of Items
                 except (ValueError,AssertionError):
                     loi_error_messages("invalid_price")
                     continue
-                status=loi_add_item(name,price)
+                status=loi_add_item(name,price) #todo: TypedDict will help
                 if status["error"]:
                     loi_error_messages(status["type"])
                 else:
@@ -1223,10 +1223,10 @@ def manage_loi_controller()->bool: #loi is List of Items
                 except (ValueError, AssertionError):
                     loi_error_messages("invalid_price")
                     continue
-                status=loi_update_price(name,price)
+                status=loi_update_price(name,price) #todo: TypedDict will help
                 if status["error"] and status["type"] == "item_not_found":
                     loi_error_messages(status["type"])
-                    sugg_item = auto_suggest_ui(auto_suggest_handler(item=name, source=list(ListOfItems.get_list().keys())))
+                    sugg_item = auto_suggest_ui(auto_suggest_handler(item=name, source=list(ListOfItems.get_list().keys()))) #todo: TypedDict will help
                     if sugg_item not in [-1, -2]:
                         name=sugg_item
                         status = loi_update_price(name, price)
@@ -1251,7 +1251,7 @@ def manage_loi_controller()->bool: #loi is List of Items
                 status = loi_delete_item(name)
                 if status["error"] and status["type"] == "item_not_found":
                     loi_error_messages(status["type"])
-                    sugg_item = auto_suggest_ui(auto_suggest_handler(item=name, source=list(ListOfItems.get_list().keys())))
+                    sugg_item = auto_suggest_ui(auto_suggest_handler(item=name, source=list(ListOfItems.get_list().keys()))) #todo: TypedDict will help
                     if sugg_item not in [-1, -2]:
                         name = sugg_item
                         status = loi_delete_item(name)
@@ -1266,7 +1266,7 @@ def manage_loi_controller()->bool: #loi is List of Items
                 if status["error"]:
                     loi_error_messages(status["type"])
                     continue
-                loi_user_output("delete_item", name)
+                loi_user_output("delete_item", name) #todo: TypedDict will help
                 changed=True
             case "reset_list":
                 if user_input["conf"]:
