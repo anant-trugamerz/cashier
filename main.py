@@ -1102,37 +1102,45 @@ def loi_delete_item(name:str | Literal[-1])->dict[str,str|bool]:
         return {
             "error": False
         }
-
-def loi_user_output(action: str, details: str | list | int | None = None):
-    """Displays the final closing message for each action performed successfully..."""
-    #todo: here if details received an integer and if i try to index it, it will raise exception... neither does the function prevent list details to be entered as integers
+def loi_user_output(action: str, name: str = "", price: int | str = 0, old_price: int | str = 0, status: Literal[0,1] | None = None):
+    """
+    Displays the final closing message for each action performed successfully...
+    """
     print("-" * 64)
     match action:
         case "add_item":
             print("Successfully added new item",end=" ")
-            if details:
-                print(f"'{details[0]}' with price {details[1]}!")
+            if name and price:
+                print(f"'{name}' with price {price}!")
             else:
                 print("!")
         case "edit_price":
             print("Successfully edited price",end=" ")
-            if details:
-                print(f"of '{details[0]}' from {details[1]} to {details[2]}!")
+            if name and price and old_price:
+                print(f"of '{name}' from {old_price} to {price}!")
             else:
                 print("!")
         case "delete_item":
             print("Successfully deleted item",end=" ")
-            if details:
-                print(f"'{details}'!")
+            if name:
+                print(f"'{name}'!")
             else:
                 print("!")
         case "get_price":
-            print(f"Price of '{details[0]}' is {details[1]}.")
+            try:
+                assert name and price is True
+                print(f"Price of '{name}' is {price}.")
+            except AssertionError:
+                print("There was some problem in displaying price of given item")
         case "reset_list":
-            if details:
-                print(f"Successfully reset list...")
-            else:
-                print(f"Cancelling reset list...")
+            try:
+                assert status is not None
+                if status:
+                    print(f"Successfully reset list...")
+                else:
+                    print(f"Cancelling reset list...")
+            except AssertionError:
+                print("There was some problem in displaying the status")
         case "exit_loop":
             print("Exiting...")
 
@@ -1201,9 +1209,9 @@ def manage_loi_controller()->bool: #loi is List of Items
                 name=user_input["item_name"]
                 status=retrieve_price(name)
                 if status["error"] == "item_not_found":
-                    loi_error_messages(status["type"]) #todo: TypedDict will help
+                    loi_error_messages(status["type"])
                     sugg_item = auto_suggest_ui(
-                        auto_suggest_handler(item=user_input["item_name"], source=list(ListOfItems.get_list().keys()))) #todo: TypedDict will help
+                        auto_suggest_handler(item=user_input["item_name"], source=list(ListOfItems.get_list().keys())))
                     if sugg_item not in [-1, -2]:
                         name=sugg_item
                         status = retrieve_price(name)
@@ -1216,9 +1224,9 @@ def manage_loi_controller()->bool: #loi is List of Items
                     else:
                         continue
                 if status["error"]!="no_error":
-                    loi_error_messages(status["type"]) #todo: TypedDict will help
+                    loi_error_messages(status["type"])
                     continue
-                loi_user_output("get_price",[name,status["price"]])
+                loi_user_output("get_price",name=name,price=status["price"])
             case "add_item":
                 name,price =user_input["item_name"],user_input["price"]
                 try:
@@ -1231,7 +1239,7 @@ def manage_loi_controller()->bool: #loi is List of Items
                 if status["error"]:
                     loi_error_messages(status["type"])
                 else:
-                    loi_user_output("add_item",[name,price])
+                    loi_user_output("add_item",name=name,price=price)
                     changed=True
             case "edit_price":
                 name, price= user_input["item_name"],user_input["price"]
@@ -1262,14 +1270,14 @@ def manage_loi_controller()->bool: #loi is List of Items
                 if status["old_price"]==price:
                     loi_error_messages("same_price")
                 else:
-                    loi_user_output("edit_price",[name,status["old_price"],price])
+                    loi_user_output("edit_price",name=name,old_price=status["old_price"],price=price)
                     changed=True
             case "delete_item":
                 name: str=user_input["item_name"]
                 status = loi_delete_item(name)
                 if status["error"] and status["type"] == "item_not_found":
                     loi_error_messages(status["type"])
-                    sugg_item = auto_suggest_ui(auto_suggest_handler(item=name, source=list(ListOfItems.get_list().keys()))) #todo: TypedDict will help
+                    sugg_item = auto_suggest_ui(auto_suggest_handler(item=name, source=list(ListOfItems.get_list().keys())))
                     if sugg_item not in [-1, -2]:
                         name = sugg_item
                         status = loi_delete_item(name)
@@ -1284,15 +1292,15 @@ def manage_loi_controller()->bool: #loi is List of Items
                 if status["error"]:
                     loi_error_messages(status["type"])
                     continue
-                loi_user_output("delete_item", name) #todo: TypedDict will help
+                loi_user_output("delete_item", name=name)
                 changed=True
             case "reset_list":
                 if user_input["conf"]:
                     ListOfItems.reset_list()
-                    loi_user_output("reset_list",1)
+                    loi_user_output("reset_list",status=1)
                     changed=True
                 else:
-                    loi_user_output("reset_list",0)
+                    loi_user_output("reset_list",status=0)
             case "exit_loop":
                 loi_user_output("exit_loop")
                 break
