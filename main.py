@@ -1128,7 +1128,7 @@ def loi_user_output(action: str, name: str = "", price: int | str = 0, old_price
                 print("!")
         case "get_price":
             try:
-                assert name and price is True
+                assert name and price
                 print(f"Price of '{name}' is {price}.")
             except AssertionError:
                 print("There was some problem in displaying price of given item")
@@ -1174,9 +1174,10 @@ def loi_error_messages(error: str | bool | Exception =True):
     """
     Displays error messages regarding the items list (loi) management in the ui.
     """
+    print("-"*64)
     match error:
         case "invalid_price":
-            print("Price is invalid!\nEnter an integer price...")
+            print("Price is invalid!\nEnter an integer price greater than 0...")
         case "item_already_exists":
             print("Item with that name already exists!")
         case "item_not_found":
