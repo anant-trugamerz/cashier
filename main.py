@@ -19,6 +19,30 @@ class LoiManagementInputDict(TypedDict):
     price: NotRequired[str]
     conf: NotRequired[bool]
 
+#DataClasses
+class ItemData:
+    """
+    Data class used to store item data in the form of objects
+    """
+    def __init__(self, name, category, rate, tax, quantity=None):
+        self.name=name
+        self.category=category
+        self.rate=rate
+        self.tax=tax
+        self.quantity=quantity
+
+class ListItemData:
+    """
+    Data class that is used to store list of item objects and perform functions on it
+    """
+    def __init__(self,array:list[ItemData]):
+        self.data=array
+    def __getitem__(self, item: str)->ItemData | None:
+        for i in self.data:
+            if i.name==item:
+                return i
+        return None
+
 #Processing Modules Segment
 class ListOfItems(object):
     """
@@ -1222,8 +1246,6 @@ def manage_loi_controller()->bool: #loi is List of Items
                     elif sugg_item == -2:
                         loi_error_messages("no_item_suggested")
                         continue
-                    else:
-                        continue
                 if status["error"]!="no_error":
                     loi_error_messages(status["type"])
                     continue
@@ -1263,8 +1285,6 @@ def manage_loi_controller()->bool: #loi is List of Items
                     elif sugg_item == -2:
                         loi_error_messages("no_item_suggested")
                         continue
-                    else:
-                        continue
                 if status["error"]:
                     loi_error_messages(status["type"])
                     continue
@@ -1287,8 +1307,6 @@ def manage_loi_controller()->bool: #loi is List of Items
                         continue
                     elif sugg_item == -2:
                         loi_error_messages("no_item_suggested")
-                        continue
-                    else:
                         continue
                 if status["error"]:
                     loi_error_messages(status["type"])
