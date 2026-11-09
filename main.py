@@ -24,7 +24,7 @@ class ItemData:
     """
     Data class used to store item data in the form of objects
     """
-    def __init__(self, name, category, rate, tax, quantity=None):
+    def __init__(self, name: str, rate: int, category: str="item", tax: int=0, quantity: int|None=None):
         self.name=name
         self.category=category
         self.rate=rate
@@ -37,12 +37,16 @@ class ListItemData:
     """
     def __init__(self,array:list[ItemData]):
         self.data=array
-    def __getitem__(self, item: str)->ItemData | None:
+    def __getitem__(self, item: str)->ItemData:
         for i in self.data:
             if i.name==item:
                 return i
-        return None
-
+        raise KeyError
+    def names(self)->list[str]:
+        names=[]
+        for i in self.data:
+            names.append(i.name)
+        return names
 #Processing Modules Segment
 class ListOfItems(object):
     """
@@ -76,22 +80,27 @@ class ListOfItems(object):
                 writer.writerow([i, j])
 
     @classmethod
-    def get_list(cls)->dict[str,int]:
+    def get_list(cls)->ListItemData: #todo: error handling is really clumsy here
         """Retrieves data from the items list csv file
-        :return: Dictionary with item names as keys and prices as values"""
+        :return: ListItemData object containing data of all items"""
         try:
             with open(ListOfItems.file_path,"r") as menu_file:
                 reader=csv.reader(menu_file)
-                menu={}
+                menu=[]
                 for row in reader:
-                    menu.update({row[0]:int(row[1])})
+                    item=ItemData(name=row[0],rate=int(row[1]))
+                    menu.append(item)
+            menu=ListItemData(menu)
             return menu
         except FileNotFoundError:
+            menu=[]
             with open(ListOfItems.file_path,"w",newline="") as menu_file:
                 writer=csv.writer(menu_file)
                 for i,j in ListOfItems.base_list.items():
                     writer.writerow([i,j])
-            return ListOfItems.base_list
+                    item=ItemData(name=i,rate=j)
+                    menu.append(item)
+            return ListItemData(menu)
     @classmethod
     def add_item(cls,item: str,price: int)->int:
         """Used for appending the menu list of items saved in a csv file.
@@ -207,7 +216,7 @@ class Cashier(object):
         """
         item=item.lower()
         try:
-            rate=Cashier.LoI[item]
+            rate=Cashier.LoI[item].rate
         except KeyError:
             self.item=item
             return -1
@@ -232,7 +241,7 @@ class Cashier(object):
         :return: 0 if the bill was edited successfully, -1 if item was not found in the billing dictionary...
         """
         try:
-            if item not in self.items.keys() and item in Cashier.LoI.keys():
+            if item not in self.items.keys() and item in Cashier.LoI.names():
                 self.billing(item,qnt)
                 return 0
             a=self.items[item]
@@ -708,7 +717,7 @@ def main_bill_controller(cash_name):
             wrong_name = cashier.item
             if wrong_name not in wrong_input.keys():
                 billing_error_messages("item_not_defined", details=cashier.item, line_num=line_num)
-                sugg_item = auto_suggest_ui(auto_suggest_handler(item=wrong_name, source=list(Cashier.LoI.keys())))
+                sugg_item = auto_suggest_ui(auto_suggest_handler(item=wrong_name, source=list(Cashier.LoI.names())))
                 if sugg_item == -2:
                     billing_error_messages("no_item_suggested")
                 elif sugg_item == -1:
@@ -1051,7 +1060,7 @@ def manage_loi_input()->LoiManagementInputDict:
         case _:
             return {"choice":"input_not_valid"}
 
-def show_loi(menu: dict[str,int])->Exception | None:
+def show_loi(menu: ListItemData)->Exception | None:
     """
     Interacts with the class method to display the list of items to the user
     :param menu: The dictionary which contains the items and respective prices for displaying to the user
@@ -1060,8 +1069,8 @@ def show_loi(menu: dict[str,int])->Exception | None:
     print("-" * 64)
     print(f"{'Item':20} {'Rate':5}")
     try:
-        for i,j in menu.items():
-            print(f"{i:20} {j:5}")
+        for i in menu.data:
+            print(f"{i.name:20} {i.rate:5}")
         return None
     except Exception as e:
         return e
@@ -1236,7 +1245,7 @@ def manage_loi_controller()->bool: #loi is List of Items
                 if status["error"] == "item_not_found":
                     loi_error_messages(status["type"])
                     sugg_item = auto_suggest_ui(
-                        auto_suggest_handler(item=user_input["item_name"], source=list(ListOfItems.get_list().keys())))
+                        auto_suggest_handler(item=user_input["item_name"], source=list(ListOfItems.get_list().names())))
                     if sugg_item not in [-1, -2]:
                         name=sugg_item
                         status = retrieve_price(name)
@@ -1275,7 +1284,7 @@ def manage_loi_controller()->bool: #loi is List of Items
                 status=loi_update_price(name,price)
                 if status["error"] and status["type"] == "item_not_found":
                     loi_error_messages(status["type"])
-                    sugg_item = auto_suggest_ui(auto_suggest_handler(item=name, source=list(ListOfItems.get_list().keys())))
+                    sugg_item = auto_suggest_ui(auto_suggest_handler(item=name, source=list(ListOfItems.get_list().names())))
                     if sugg_item not in [-1, -2]:
                         name=sugg_item
                         status = loi_update_price(name, price)
@@ -1298,7 +1307,7 @@ def manage_loi_controller()->bool: #loi is List of Items
                 status = loi_delete_item(name)
                 if status["error"] and status["type"] == "item_not_found":
                     loi_error_messages(status["type"])
-                    sugg_item = auto_suggest_ui(auto_suggest_handler(item=name, source=list(ListOfItems.get_list().keys())))
+                    sugg_item = auto_suggest_ui(auto_suggest_handler(item=name, source=list(ListOfItems.get_list().names())))
                     if sugg_item not in [-1, -2]:
                         name = sugg_item
                         status = loi_delete_item(name)
