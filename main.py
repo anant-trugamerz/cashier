@@ -24,12 +24,15 @@ class ItemData:
     """
     Data class used to store item data in the form of objects
     """
-    def __init__(self, name: str, rate: int, category: str="item", tax: int=0, quantity: int|None=None):
+    def __init__(self, name: str, rate: int, category: str="item", tax: int=0, quantity: int=0):
         self.name=name
         self.category=category
         self.rate=rate
         self.tax=tax
         self.quantity=quantity
+    def snapshot(self):
+        copy_obj=ItemData(name=copy.copy(self.name),category=copy.copy(self.category),rate=copy.copy(self.rate),tax=copy.copy(self.tax),quantity=copy.copy(self.quantity))
+        return copy_obj
 
 class ListItemData:
     """
@@ -42,17 +45,38 @@ class ListItemData:
             if i.name==item:
                 return i
         raise KeyError
+    def append(self,item: ItemData):
+        self.data.append(item)
     def names(self)->list[str]:
         names=[]
         for i in self.data:
             names.append(i.name)
         return names
+    def pop(self,item_name):
+        try:
+            item=self[item_name]
+            self.data.remove(item)
+            return item
+        except KeyError:
+            return None
+    def snapshot(self):
+        copy_list =list(map(ItemData.snapshot, self.data))
+        return ListItemData(copy_list)
+    def serialize(self):
+        return_data=[]
+        for i in self.data:
+            return_data.append(i.__dict__)
+        return return_data
+    @classmethod
+    def deserialize(cls,data:list[dict]):
+        return_data=list(map(lambda x: ItemData(**x), data))
+        return ListItemData(return_data)
 #Processing Modules Segment
 class ListOfItems(object):
     """
     Class which manages the csv file containing the items list. Deals with retrieving names and pries, updating prices, adding and deleting items etc.
     """
-    base_list={
+    base_list={ #todo: work on base list system... when list is not available, the programme will prompt for the base list... this base list should be of time ListItemData not dictionary
         "potato":20,
         "tomato":30,
         "carrot":50,
@@ -201,7 +225,7 @@ class Cashier(object):
         """
         self.name=cashier
         self.item=""
-        self.items={}
+        self.items=ListItemData([])
         self.amt=0
         self.cust=cust
         self.custNum=cust_num
@@ -220,17 +244,18 @@ class Cashier(object):
         except KeyError:
             self.item=item
             return -1
-        if item in self.items.keys():
-            self.items[item][0]+=qnt
+        if item in self.items.names():
+            self.items[item].quantity+=qnt
             return 0
-        self.items.update({item:[qnt,rate]})
+        item_obj=ItemData(name=item, rate=rate, quantity=qnt)
+        self.items.append(item_obj)
         return 0
     def rem_item(self,item):
         """
         This is the method which allows the user to remove any item from the billing dictionary...
         :return: 0 if item was successfully removed, -1 if item was not found in the dictionary
         """
-        if item not in self.items:
+        if item not in self.items.names():
             self.item = item
             return -1
         self.items.pop(item)
@@ -241,22 +266,26 @@ class Cashier(object):
         :return: 0 if the bill was edited successfully, -1 if item was not found in the billing dictionary...
         """
         try:
-            if item not in self.items.keys() and item in Cashier.LoI.names():
+            if item not in self.items.names() and item in Cashier.LoI.names():
                 self.billing(item,qnt)
                 return 0
-            a=self.items[item]
-            a[0]=qnt
+            self.items[item].quantity=qnt
             return 0
         except KeyError:
             self.item=item
             return -1
+    @classmethod
+    def amount(cls,item: ItemData):
+        raw_total=item.quantity*item.rate
+        tax=item.tax*raw_total/100
+        return raw_total+tax
     def total(self):
         total=0
         if not self.items:
             return total
         else:
-            for item,data in self.items.items():
-                total += int(data[0])*int(data[1])
+            for item in self.items.data:
+                total += Cashier.amount(item)
             return total
     def get_transaction(self):
         """
@@ -264,7 +293,7 @@ class Cashier(object):
         :return: a transaction object
         """
         self.amt=self.total()
-        transaction=Transaction(self.name,self.cust,self.custNum,self.items,self.amt)
+        transaction=Transaction(self.name,self.cust,self.custNum,self.items,self.amt) #todo: fix this, like how the ListItemData object is to be managed
         return transaction
 
 class Transaction(object):
@@ -277,13 +306,13 @@ class Transaction(object):
         :param cash_name: name of the cashier
         :param cust_name: name of the customer
         :param cust_mob: mobile number of the customer
-        :param items: the list of items that were billed
+        :param items: the ListDataType object of items that were billed
         :param total: the total monetary amount
         """
         self.cash_name=cash_name
         self.cust_name=cust_name
         self.cust_mob=cust_mob
-        self.items=copy.deepcopy(items)
+        self.items=items.snapshot()
         self.total=total
 
 class RecHandler(object):
@@ -297,7 +326,7 @@ class RecHandler(object):
         It is used to initialize a RecHandler object...
         :param trans: a transaction object
         """
-        self.transaction={"cash_name":trans.cash_name, "cust_name":trans.cust_name,"cust_mob":trans.cust_mob,"items":trans.items,"total":trans.total}
+        self.transaction={"cash_name":trans.cash_name, "cust_name":trans.cust_name,"cust_mob":trans.cust_mob,"items":trans.items.serialize(),"total":trans.total}
     def update_rec(self):
         """
         Used to update the record file by adding the current transaction to the record file...
@@ -615,7 +644,7 @@ def bill_header():
     print(f"{"ANANT'S CASHIER SOFTWARE":^64}")
     print("-"*64)
 
-def display_bill(items: dict[str,list[int]], total: int =0, other_data :dict | None =None):
+def display_bill(items: ListItemData | None = None, total: int =0, other_data :dict | None =None): #todo: make this handle ListItemData object instead of a dictionary
     """
     Used to display the billing details to the user in an organized manner
     :param items: the items which are to be displayed
@@ -630,16 +659,13 @@ def display_bill(items: dict[str,list[int]], total: int =0, other_data :dict | N
     if not items:
         print("No data available...")
         return
-    print(f"{"ITEM NAME":22}{"RATE":6}{"QUANTITY":10}{"AMOUNT":5}")
+    print(f"{"ITEM NAME":20}|{"CATEGORY":20}|{"RATE":6}|{"TAX":5}|{"QUANTITY":10}|{"AMOUNT":10}")
     print("-"*64)
-    for i,j in items.items():
-        a=i
-        b=j[0]
-        c=j[1]
-        print(f"{a:20}{c:5}{b:10}{b*c:5}")
+    for i in items.data:
+        print(f"{i.name:20}|{i.category:20}|{i.rate:6}|{i.tax:5}|{i.quantity:10}|{Cashier.amount(i):10}") #todo: make an amount calculating function also incorporating gst amount
     print("-"*64)
     print(f"TOTAL={total}")
-    print(f"TOTAL ITEMS PURCHASED={len(items)}")
+    print(f"TOTAL ITEMS PURCHASED={len(items.data)}")
     print("-"*64)
 
 def bill_confirmation()->bool:
@@ -847,16 +873,16 @@ def rec_controller():
                     trans_info=get_spec_rec(status["cust_name"],mobile)
                     if trans_info:
                         for i in trans_info:
-                            display_bill(i["items"],i["total"],i)
+                            display_bill(ListItemData.deserialize(i["items"]),i["total"],i)
                     else:
-                        display_bill({})
+                        display_bill()
                 case "all_cust_data":
                     trans_info: list | None = get_all_rec()
                     if trans_info:
                         for i in trans_info:
-                            display_bill(i["items"], i["total"], i)
+                            display_bill(ListItemData.deserialize(i["items"]), i["total"], i)
                     else:
-                        display_bill({})
+                        display_bill()
                 case "del_cust_data":
                     conf=conf_del_rec()
                     if conf:
