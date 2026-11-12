@@ -4,6 +4,7 @@ import csv
 from pathlib import Path
 import copy
 from typing import TypedDict, NotRequired, Literal
+"""from decimal import Decimal"""
 
 """
 Welcome to the Cashier Program made by Anant!
@@ -24,7 +25,7 @@ class ItemData:
     """
     Data class used to store item data in the form of objects
     """
-    def __init__(self, name: str, rate: int, category: str="item", tax: int=0, quantity: int=0):
+    def __init__(self, name: str, rate: float, category: str="item", tax: float=0, quantity: float=0):
         self.name=name
         self.category=category
         self.rate=rate
@@ -71,6 +72,7 @@ class ListItemData:
     def deserialize(cls,data:list[dict]):
         return_data=list(map(lambda x: ItemData(**x), data))
         return ListItemData(return_data)
+
 #Processing Modules Segment
 class ListOfItems(object):
     """
@@ -112,7 +114,7 @@ class ListOfItems(object):
                 reader=csv.reader(menu_file)
                 menu=[]
                 for row in reader:
-                    item=ItemData(name=row[0],rate=int(row[1]))
+                    item=ItemData(name=row[0],rate=float(row[1]))
                     menu.append(item)
             menu=ListItemData(menu)
             return menu
@@ -126,7 +128,7 @@ class ListOfItems(object):
                     menu.append(item)
             return ListItemData(menu)
     @classmethod
-    def add_item(cls,item: str,price: int)->int:
+    def add_item(cls,item: str,price: float)->Literal[0,-1]:
         """Used for appending the menu list of items saved in a csv file.
         :return: 0 if successfully updated, -1 if item already exists"""
         try:
@@ -145,7 +147,7 @@ class ListOfItems(object):
             writer.writerow([item,price])
         return 0
     @classmethod
-    def del_item(cls,item_name: str)-> int:
+    def del_item(cls,item_name: str)-> Literal[0,-1]:
         """Used for removing existing items from the menu list csv file
         :return: 0 if successfully updated, -1 if item not found in file"""
         name = process(item_name)
@@ -194,7 +196,7 @@ class ListOfItems(object):
                 for i in reader:
                     if i[0].lower()==item.lower():
                         status=True
-                        old_price=int(i[1])
+                        old_price=float(i[1])
                         updated.append([i[0],new_price])
                     else:
                         updated.append(i)
@@ -293,14 +295,14 @@ class Cashier(object):
         :return: a transaction object
         """
         self.amt=self.total()
-        transaction=Transaction(self.name,self.cust,self.custNum,self.items,self.amt) #todo: fix this, like how the ListItemData object is to be managed
+        transaction=Transaction(self.name,self.cust,self.custNum,self.items,self.amt)
         return transaction
 
 class Transaction(object):
     """
     This is the class which is used to create snapshots of a bill transaction...
     """
-    def __init__(self,cash_name,cust_name,cust_mob,items,total):
+    def __init__(self,cash_name,cust_name,cust_mob,items: ListItemData,total):
         """
         Initializes the transaction object, to create a snapshot of the transaction...
         :param cash_name: name of the cashier
@@ -587,7 +589,7 @@ def bill_process(cashier,element):
                 if element[2].replace(" ", "") == "":
                     quan = 1
                 else:
-                    quan = int(process(element[2]))
+                    quan = float(process(element[2]))
                 assert quan > 0
             except IndexError:
                 quan=1
@@ -619,7 +621,7 @@ def bill_process(cashier,element):
                 if element[1].replace(" ","") == "":
                     quan=1
                 else:
-                    quan=int(process(element[1]))
+                    quan=float(process(element[1]))
                 assert quan>0
             except IndexError:
                 quan=1
@@ -644,7 +646,7 @@ def bill_header():
     print(f"{"ANANT'S CASHIER SOFTWARE":^64}")
     print("-"*64)
 
-def display_bill(items: ListItemData | None = None, total: int =0, other_data :dict | None =None): #todo: make this handle ListItemData object instead of a dictionary
+def display_bill(items: ListItemData | None = None, total: float =0, other_data :dict | None =None):
     """
     Used to display the billing details to the user in an organized manner
     :param items: the items which are to be displayed
@@ -662,7 +664,7 @@ def display_bill(items: ListItemData | None = None, total: int =0, other_data :d
     print(f"{"ITEM NAME":20}|{"CATEGORY":20}|{"RATE":6}|{"TAX":5}|{"QUANTITY":10}|{"AMOUNT":10}")
     print("-"*64)
     for i in items.data:
-        print(f"{i.name:20}|{i.category:20}|{i.rate:6}|{i.tax:5}|{i.quantity:10}|{Cashier.amount(i):10}") #todo: make an amount calculating function also incorporating gst amount
+        print(f"{i.name:20}|{i.category:20}|{i.rate:6.2f}|{i.tax:5.2f}|{i.quantity:10.2f}|{Cashier.amount(i):10.2f}")
     print("-"*64)
     print(f"TOTAL={total}")
     print(f"TOTAL ITEMS PURCHASED={len(items.data)}")
@@ -694,7 +696,7 @@ def billing_error_messages(error, line_num=None, details=None):
         case "item_not_defined":
             print(f"{details} not defined!")
         case "invalid_quantity":
-            print("The quantity is not valid! The quantity must be an integer greater than 0.\nSee help page for more information...")
+            print("The quantity is not valid! The quantity must be a float greater than 0.\nSee help page for more information...")
             print(f"Error has occurred during {details}!")
         case "invalid_format":
             print("The format is not valid!\nSee help page for information regarding the format of billing prompt requests...")
@@ -1019,7 +1021,7 @@ def manage_loi_input()->LoiManagementInputDict:
                     }
         case 2:
             try:
-                name, price= input("Enter name and price (separated by a comma) \nFormat: <item_name>, <price> where price is an integer...\n").split(",")
+                name, price= input("Enter name and price (separated by a comma) \nFormat: <item_name>, <price> where price is a float...\n").split(",")
             except ValueError:
                 return {
                     "choice":"input_not_valid"
@@ -1031,7 +1033,7 @@ def manage_loi_input()->LoiManagementInputDict:
             }
         case 3:
             try:
-                name, price= input("Enter name and updated price (separated by a comma) \nFormat: <item_name>, <price> where price is an integer...\n").split(",")
+                name, price= input("Enter name and updated price (separated by a comma) \nFormat: <item_name>, <price> where price is a decimal number...\n").split(",")
             except ValueError:
                 return {
                     "choice":"input_not_valid"
@@ -1101,7 +1103,7 @@ def show_loi(menu: ListItemData)->Exception | None:
     except Exception as e:
         return e
 
-def loi_add_item(name: str,price: int)->dict[str,str|bool]:
+def loi_add_item(name: str,price: float)->dict[str,str|bool]:
     """
     Adds new item with price to the list of items by interacting with the class.
     :return: dictionary telling about error and type of error
@@ -1117,13 +1119,8 @@ def loi_add_item(name: str,price: int)->dict[str,str|bool]:
             return {
                 "error": False,
             }
-        case _:
-            return {
-                "error": True,
-                "type": "unknown"
-            }
 
-def loi_update_price(item: str,price: int)->dict:
+def loi_update_price(item: str,price: float)->dict:
     """
     Updates the price of an existing item in the csv file (list of items).
     :return: status about error, type of error and other important details
@@ -1161,7 +1158,7 @@ def loi_delete_item(name:str | Literal[-1])->dict[str,str|bool]:
         return {
             "error": False
         }
-def loi_user_output(action: str, name: str = "", price: int | str = 0, old_price: int | str = 0, status: Literal[0,1] | None = None):
+def loi_user_output(action: str, name: str = "", price: float  = 0, old_price: float = 0, status: Literal[0,1] | None = None):
     """
     Displays the final closing message for each action performed successfully...
     """
@@ -1170,13 +1167,13 @@ def loi_user_output(action: str, name: str = "", price: int | str = 0, old_price
         case "add_item":
             print("Successfully added new item",end=" ")
             if name and price:
-                print(f"'{name}' with price {price}!")
+                print(f"'{name}' with price {price:.2f}!")
             else:
                 print("!")
         case "edit_price":
             print("Successfully edited price",end=" ")
             if name and price and old_price:
-                print(f"of '{name}' from {old_price} to {price}!")
+                print(f"of '{name}' from {old_price:.2f} to {price:.2f}!")
             else:
                 print("!")
         case "delete_item":
@@ -1188,7 +1185,7 @@ def loi_user_output(action: str, name: str = "", price: int | str = 0, old_price
         case "get_price":
             try:
                 assert name and price
-                print(f"Price of '{name}' is {price}.")
+                print(f"Price of '{name}' is {price:.2f}.")
             except AssertionError:
                 print("There was some problem in displaying price of given item")
         case "reset_list":
@@ -1284,11 +1281,11 @@ def manage_loi_controller()->bool: #loi is List of Items
                 if status["error"]!="no_error":
                     loi_error_messages(status["type"])
                     continue
-                loi_user_output("get_price",name=name,price=status["price"])
+                loi_user_output("get_price",name=name,price=float(status["price"]))
             case "add_item":
                 name,price =user_input["item_name"],user_input["price"]
                 try:
-                    price=int(price)
+                    price=float(price)
                     assert price>=0
                 except (ValueError,AssertionError):
                     loi_error_messages("invalid_price")
@@ -1302,7 +1299,7 @@ def manage_loi_controller()->bool: #loi is List of Items
             case "edit_price":
                 name, price= user_input["item_name"],user_input["price"]
                 try:
-                    price = int(price)
+                    price = float(price)
                     assert price > 0
                 except (ValueError, AssertionError):
                     loi_error_messages("invalid_price")
@@ -1415,6 +1412,7 @@ def exit_handle():
     print("Exiting...")
     print("Thank you for using cashier software!")
     print("-" * 64)
+
 def main_controller():
     """
     The main controller which handles the main program and calls various methods based on user input...
