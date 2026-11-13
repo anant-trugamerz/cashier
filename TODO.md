@@ -4,7 +4,6 @@
 - [x] Optimization of autosuggest mechanism
 - [x] Display the complete item list
 - [x] Allow editing the item list/menu
-- [ ] Add a "More" menu to organize additional UI features 
 - [ ] Edit item quantities after bill has been displayed  
 - [ ] Allow customer details to be edited after entry  
 
@@ -13,6 +12,7 @@
 - [ ] Record transactions using invoice numbers
 - [ ] Add GST/tax, discounts, and payment method selection during checkout
 - [ ] Improve error messages with contextual details
+- [ ] Decimal datatype for quantities, rates and totals implementation
 
 ## Large Updates
 - [ ] Separate responsibilities into different files
