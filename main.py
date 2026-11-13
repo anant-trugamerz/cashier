@@ -1,9 +1,11 @@
 import datetime as dt
 import json
 import csv
+from dataclasses import dataclass
 from pathlib import Path
 import copy
 from typing import TypedDict, NotRequired, Literal
+
 """from decimal import Decimal"""
 
 """
@@ -21,6 +23,7 @@ class LoiManagementInputDict(TypedDict):
     conf: NotRequired[bool]
 
 #DataClasses
+@dataclass
 class ItemData:
     """
     Data class used to store item data in the form of objects
@@ -28,13 +31,14 @@ class ItemData:
     def __init__(self, name: str, rate: float, category: str="item", tax: float=0, quantity: float=0):
         self.name=name
         self.category=category
-        self.rate=rate
-        self.tax=tax
-        self.quantity=quantity
+        self.rate=round(rate,2)
+        self.tax=round(tax,2)
+        self.quantity=round(quantity,2)
     def snapshot(self):
         copy_obj=ItemData(name=copy.copy(self.name),category=copy.copy(self.category),rate=copy.copy(self.rate),tax=copy.copy(self.tax),quantity=copy.copy(self.quantity))
         return copy_obj
 
+@dataclass
 class ListItemData:
     """
     Data class that is used to store list of item objects and perform functions on it
@@ -280,7 +284,7 @@ class Cashier(object):
     def amount(cls,item: ItemData):
         raw_total=item.quantity*item.rate
         tax=item.tax*raw_total/100
-        return raw_total+tax
+        return round(raw_total+tax,2)
     def total(self):
         total=0
         if not self.items:
@@ -587,12 +591,13 @@ def bill_process(cashier,element):
         case "e" | "edit" | "update":
             try:
                 if element[2].replace(" ", "") == "":
-                    quan = 1
+                    quan = 1.00
                 else:
                     quan = float(process(element[2]))
+                    quan=round(quan,2)
                 assert quan > 0
             except IndexError:
-                quan=1
+                quan=1.00
             except (ValueError,AssertionError):
                 return {
                     "error": True,
@@ -619,12 +624,13 @@ def bill_process(cashier,element):
         case _:
             try:
                 if element[1].replace(" ","") == "":
-                    quan=1
+                    quan=1.00
                 else:
                     quan=float(process(element[1]))
+                    quan=round(quan,2)
                 assert quan>0
             except IndexError:
-                quan=1
+                quan=1.00
             except (ValueError,AssertionError):
                 return {
                     "error": True,
@@ -1207,7 +1213,7 @@ def retrieve_price(name: str)->dict[str,str]:
     """
     status=ListOfItems.find_item(name)
     try:
-        int(status)
+        float(status)
     except ValueError:
         status=-2
     if status==-1:
@@ -1221,6 +1227,7 @@ def retrieve_price(name: str)->dict[str,str]:
             "type": "unknown"
         }
     else:
+        status=round(float(status),2)
         return {
             "error": "no_error",
             "price": str(status)
@@ -1285,7 +1292,7 @@ def manage_loi_controller()->bool: #loi is List of Items
             case "add_item":
                 name,price =user_input["item_name"],user_input["price"]
                 try:
-                    price=float(price)
+                    price=round(float(price),2)
                     assert price>=0
                 except (ValueError,AssertionError):
                     loi_error_messages("invalid_price")
@@ -1299,7 +1306,7 @@ def manage_loi_controller()->bool: #loi is List of Items
             case "edit_price":
                 name, price= user_input["item_name"],user_input["price"]
                 try:
-                    price = float(price)
+                    price = round(float(price),2)
                     assert price > 0
                 except (ValueError, AssertionError):
                     loi_error_messages("invalid_price")
@@ -1380,12 +1387,12 @@ def main_UI_loop():
     :return: whether an error has occurred or not, and the user input...
     """
     print("-" * 64)
-    print("Enter 1 to create bill\n2 for customer record actions\n3 to learn more about the program\n4 to enter items management menu\n5 to exit cashier program")
+    print("Enter 1 to create bill\n2 for customer record actions\n3 to enter items management menu\n4 to learn more about the program\n5 to exit cashier program")
     try:
         choice=int(input())
     except ValueError:
         return {"error":"input_not_valid"}
-    action_list={1:"create_bill",2:"record_actions",3:"help_window",4:"items_list",5:"exit_loop"}
+    action_list={1:"create_bill",2:"record_actions",3:"items_list",4:"help_window",5:"exit_loop"}
     try:
         return {"error":None,"action":action_list[choice]}
     except (IndexError,KeyError):
